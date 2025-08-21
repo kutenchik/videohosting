@@ -1,0 +1,222 @@
+{% extends 'admin/base.html' %}
+{% block title %}Админ: Посты{% endblock %}
+
+{% block admin_content %}
+
+<div class="content-header">
+  <h1>Управление постами</h1>
+  <div>
+    <span class="badge bg-primary">Всего: {{ posts|length }}</span>
+  </div>
+</div>
+
+<div class="filter-container">
+  <div class="row g-2">
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-user"></i></span>
+        <input id="filterAuthP" class="form-control" placeholder="Автор">
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-comment-alt"></i></span>
+        <input id="filterTextP" class="form-control" placeholder="Текст поста">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+        <input type="date" id="filterDateFromP" class="form-control" title="Дата от">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+        <input type="date" id="filterDateToP" class="form-control" title="Дата до">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-filter"></i></span>
+        <select id="filterPStatus" class="form-select">
+          <option value="">Статус – все</option>
+          <option value="активен">Активные</option>
+          <option value="забанен">Забаненные</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="row mt-2">
+    <div class="col-md-12">
+      <button class="btn btn-primary" id="resetFiltersP">
+        <i class="fas fa-sync-alt me-1"></i>Сбросить фильтры
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="data-table">
+  <table id="postsTable" class="table table-hover">
+    <thead>
+      <tr>
+        <th width="5%">ID</th>
+        <th width="15%">Автор</th>
+        <th width="40%">Содержание</th>
+        <th width="15%">Дата</th>
+        <th width="10%">Статус</th>
+        <th width="15%">Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr class="{% if p.is_banned %}table-danger{% endif %}">
+        <td>{{ p.post_id }}</td>
+        <td>
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-2 bg-light rounded-circle d-flex align-items-center justify-content-center">
+              <i class="fas fa-user text-secondary"></i>
+            </div>
+            <div>{{ p.author.username }}</div>
+          </div>
+        </td>
+        <td>
+          <div class="post-content">
+            <div class="short-content text-truncate" style="max-width: 350px;">{{ p.content|truncate(50) }}</div>
+            <div class="full-content d-none" style="word-wrap: break-word; max-width: 350px;">{{ p.content }}</div>
+            <button class="btn btn-sm btn-link p-0 mt-1 toggle-content">Показать полностью</button>
+          </div>
+        </td>
+        <td>{{ p.created_at.strftime('%Y-%m-%d') }}</td>
+        <td>
+          {% if p.is_banned %}
+            <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Забанен</span>
+          {% else %}
+            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Активен</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not p.is_banned %}
+            <form method="post" action="{{ url_for('admin.ban_post', post_id=p.post_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-danger">
+                <i class="fas fa-ban me-1"></i>Бан
+              </button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('admin.unban_post', post_id=p.post_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-success">
+                <i class="fas fa-check me-1"></i>Разбан
+              </button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Модальное окно для просмотра полного поста -->
+<div class="modal fade" id="postModal" tabindex="-1" aria-labelledby="postModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="postModalLabel">Полный текст поста</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="fullPostText"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Настройка кнопок "Показать полностью"
+  document.querySelectorAll('.toggle-content').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const contentDiv = btn.closest('.post-content');
+      const shortText = contentDiv.querySelector('.short-content');
+      const fullText = contentDiv.querySelector('.full-content');
+      
+      const isHidden = fullText.classList.contains('d-none');
+      if (isHidden) {
+        shortText.classList.add('d-none');
+        fullText.classList.remove('d-none');
+        btn.textContent = 'Скрыть';
+      } else {
+        shortText.classList.remove('d-none');
+        fullText.classList.add('d-none');
+        btn.textContent = 'Показать полностью';
+      }
+    });
+  });
+
+  const rows = Array.from(document.querySelectorAll('#postsTable tbody tr'));
+  const fAuth = document.getElementById('filterAuthP');
+  const fText = document.getElementById('filterTextP');
+  const fDateFrom = document.getElementById('filterDateFromP');
+  const fDateTo = document.getElementById('filterDateToP');
+  const fStatus = document.getElementById('filterPStatus');
+  const resetBtn = document.getElementById('resetFiltersP');
+  
+  function applyFilter() {
+    const vAuth = fAuth.value.trim().toLowerCase();
+    const vText = fText.value.trim().toLowerCase();
+    const dateFrom = fDateFrom.value ? new Date(fDateFrom.value) : null;
+    const dateTo = fDateTo.value ? new Date(fDateTo.value) : null;
+    const vStatus = fStatus.value.toLowerCase();
+
+    let count = 0;
+
+    rows.forEach(row => {
+      const cols = row.children;
+      const author = cols[1].textContent.toLowerCase();
+      const text = cols[2].textContent.toLowerCase();
+      const dateStr = cols[3].textContent.trim(); // "YYYY-MM-DD"
+      const date = dateStr ? new Date(dateStr) : null;
+      const status = cols[4].textContent.trim().toLowerCase();
+
+      const okAuth = !vAuth || author.includes(vAuth);
+      const okText = !vText || text.includes(vText);
+      const okDateFrom = !dateFrom || (date && date >= dateFrom);
+      const okDateTo = !dateTo || (date && date <= dateTo);
+      const okStatus = !vStatus || status.includes(vStatus);
+
+      const visible = (okAuth && okText && okDateFrom && okDateTo && okStatus);
+      row.style.display = visible ? '' : 'none';
+      if (visible) count++;
+    });
+    
+    document.querySelector('.badge.bg-primary').textContent = `Показано: ${count} из ${rows.length}`;
+  }
+  
+  function resetFilters() {
+    fAuth.value = '';
+    fText.value = '';
+    fDateFrom.value = '';
+    fDateTo.value = '';
+    fStatus.value = '';
+    
+    rows.forEach(row => {
+      row.style.display = '';
+    });
+    
+    document.querySelector('.badge.bg-primary').textContent = `Всего: ${rows.length}`;
+  }
+  
+  // Навешиваем обработчики
+  [fAuth, fText, fDateFrom, fDateTo].forEach(el =>
+    el.addEventListener('input', applyFilter)
+  );
+  fStatus.addEventListener('change', applyFilter);
+  resetBtn.addEventListener('click', resetFilters);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Уведомления{% endblock %}
+
+{% block content %}
+<h2>Уведомления</h2>
+<ul>
+    {% for notification in notifications %}
+        <li class="{{ 'unread' if not notification.is_read else '' }}">
+            {{ notification.message }} - {{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}
+        </li>
+    {% else %}
+        <p>У вас нет уведомлений.</p>
+    {% endfor %}
+</ul>
+{% endblock %}

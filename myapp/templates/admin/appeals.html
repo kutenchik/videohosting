@@ -1,0 +1,134 @@
+{% extends 'admin/base.html' %}
+{% block title %}Админ: Аппеляции{% endblock %}
+
+{% block admin_content %}
+<div class="content-header">
+  <h1>Аппеляции на разблокировку видео</h1>
+  <div>
+    <span class="badge bg-primary">Всего: {{ appeals|length }}</span>
+  </div>
+</div>
+
+<div class="filter-container">
+  <div class="row g-2">
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-video"></i></span>
+        <input id="filterVideo" class="form-control" placeholder="Название видео">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-user"></i></span>
+        <input id="filterUser" class="form-control" placeholder="Пользователь">
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-comment-alt"></i></span>
+        <input id="filterReason" class="form-control" placeholder="Причина">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <input type="date" id="filterDateFrom" class="form-control" title="Дата от">
+    </div>
+    <div class="col-md-2">
+      <input type="date" id="filterDateTo" class="form-control" title="Дата до">
+    </div>
+  </div>
+  <div class="row mt-2">
+    <div class="col-md-12">
+      <button class="btn btn-primary" id="resetFilters">
+        <i class="fas fa-sync-alt me-1"></i>Сбросить фильтры
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="data-table mt-3">
+  <table id="appealsTable" class="table table-hover">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Видео</th>
+        <th>Пользователь</th>
+        <th>Причина</th>
+        <th>Дата</th>
+        <th>Действие</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in appeals %}
+      <tr>
+        <td>{{ a.appeal_id }}</td>
+        <td>{{ a.video.title }}</td>
+        <td>{{ a.user.username }}</td>
+        <td>{{ a.reason }}</td>
+        <td>{{ a.created_at.strftime('%Y-%m-%d') }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('admin.unblock_video', appeal_id=a.appeal_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-success">
+              <i class="fas fa-unlock-alt me-1"></i>Разблокировать
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = Array.from(document.querySelectorAll('#appealsTable tbody tr'));
+  const fVideo = document.getElementById('filterVideo');
+  const fUser = document.getElementById('filterUser');
+  const fReason = document.getElementById('filterReason');
+  const fDateFrom = document.getElementById('filterDateFrom');
+  const fDateTo = document.getElementById('filterDateTo');
+  const resetBtn = document.getElementById('resetFilters');
+
+  function applyFilter() {
+    const vVideo = fVideo.value.trim().toLowerCase();
+    const vUser = fUser.value.trim().toLowerCase();
+    const vReason = fReason.value.trim().toLowerCase();
+    const dateFrom = fDateFrom.value ? new Date(fDateFrom.value) : null;
+    const dateTo = fDateTo.value ? new Date(fDateTo.value) : null;
+
+    let count = 0;
+
+    rows.forEach(row => {
+      const [id, video, user, reason, dateStr] = [...row.children].map(td => td.textContent.trim());
+      const date = dateStr ? new Date(dateStr) : null;
+
+      const okVideo = !vVideo || video.toLowerCase().includes(vVideo);
+      const okUser = !vUser || user.toLowerCase().includes(vUser);
+      const okReason = !vReason || reason.toLowerCase().includes(vReason);
+      const okDateFrom = !dateFrom || (date && date >= dateFrom);
+      const okDateTo = !dateTo || (date && date <= dateTo);
+
+      const visible = okVideo && okUser && okReason && okDateFrom && okDateTo;
+      row.style.display = visible ? '' : 'none';
+      if (visible) count++;
+    });
+
+    document.querySelector('.badge.bg-primary').textContent = `Показано: ${count} из {{ appeals|length }}`;
+  }
+
+  [fVideo, fUser, fReason, fDateFrom, fDateTo].forEach(el =>
+    el.addEventListener('input', applyFilter)
+  );
+
+  resetBtn.addEventListener('click', () => {
+    fVideo.value = '';
+    fUser.value = '';
+    fReason.value = '';
+    fDateFrom.value = '';
+    fDateTo.value = '';
+    rows.forEach(row => row.style.display = '');
+    document.querySelector('.badge.bg-primary').textContent = `Всего: {{ appeals|length }}`;
+  });
+});
+</script>
+{% endblock %}

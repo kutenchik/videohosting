@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Публикация{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card mb-3">
+        <div class="card-body">
+            <p>{{ post.content }}</p>
+            {% if post.image_url %}
+                <img src="{{ url_for('static', filename='uploads/' ~ post.image_url) }}" class="img-fluid" alt="Изображение">
+            {% endif %}
+        </div>
+    </div>
+    {% if post.is_poll %}
+    <div class="card">
+        <div class="card-body">
+            <h5>Опрос:</h5>
+            <ul class="list-group">
+                {% for option in post.poll_options %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ option.option_text }}
+                        <span>
+                            {{ option.votes.count() }} голосов
+                            {% if current_user.is_authenticated %}
+                                <form method="POST" action="{{ url_for('vote', option_id=option.option_id) }}" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-primary">Голосовать</button>
+                                </form>
+                            {% endif %}
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

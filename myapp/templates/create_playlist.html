@@ -1,0 +1,451 @@
+{% extends 'base.html' %}
+
+{% block title %}Создать плейлист рецептов{% endblock %}
+
+{% block content %}
+<style>
+    /* Стили для страницы создания плейлистов */
+.playlist-creation-container {
+  max-width: 850px;
+  margin: 30px auto;
+  padding: 0 15px;
+}
+
+.playlist-creation-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.playlist-creation-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0d0d0d;
+  margin-bottom: 10px;
+}
+
+.playlist-creation-subtitle {
+  color: #606060;
+  font-size: 16px;
+}
+
+.playlist-creation-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.playlist-creation-card-body {
+  padding: 30px;
+}
+
+.playlist-creation-form .form-group {
+  margin-bottom: 25px;
+}
+
+.playlist-creation-form label {
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: block;
+  color: #0d0d0d;
+}
+
+.playlist-creation-form .form-control {
+  border-radius: 8px;
+  padding: 12px 15px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.playlist-creation-form .form-control:focus {
+  border-color: #c00;
+  box-shadow: 0 0 0 3px rgba(204, 0, 0, 0.15);
+}
+
+.playlist-creation-form .form-text {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.playlist-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.privacy-option, .category-option {
+  flex: 1;
+  min-width: 270px;
+}
+
+.privacy-option h5, .category-option h5, .playlist-cover-section h5 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #0d0d0d;
+}
+
+.privacy-toggle {
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.privacy-toggle .form-check {
+  padding: 10px 15px;
+  margin: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.privacy-toggle .form-check:hover {
+  background-color: #f1f1f1;
+}
+
+.privacy-toggle .form-check-input {
+  margin-top: 0.3rem;
+}
+
+.privacy-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.public-icon {
+  background-color: rgba(25, 135, 84, 0.1);
+  color: #198754;
+}
+
+.private-icon {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: #6c757d;
+}
+
+.privacy-text {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+}
+
+.privacy-text strong {
+  font-size: 14px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.privacy-description {
+  font-size: 12px;
+  color: #606060;
+}
+
+.custom-select {
+  height: 48px;
+  cursor: pointer;
+}
+
+.playlist-cover-section {
+  margin-bottom: 30px;
+}
+
+.playlist-cover-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.cover-preview {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.cover-preview-image {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background-color: #f1f1f1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cover-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.cover-preview-image:hover .cover-overlay {
+  opacity: 1;
+}
+
+.cover-selection {
+  flex: 1;
+  min-width: 250px;
+}
+
+.cover-selection p {
+  font-size: 14px;
+  color: #606060;
+  margin-bottom: 15px;
+}
+
+.cover-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cover-option-btn {
+  padding: 8px 15px;
+  border-radius: 20px;
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s;
+}
+
+.cover-option-btn:hover {
+  background-color: #f1f1f1;
+}
+
+.cover-option-btn.active {
+  background-color: #c00;
+  color: white;
+  border-color: #c00;
+}
+
+.playlist-creation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.playlist-creation-actions .btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #c00;
+  border-color: #c00;
+}
+
+.btn-primary:hover {
+  background-color: #b00;
+  border-color: #b00;
+}
+
+.create-playlist-btn {
+  min-width: 180px;
+}
+
+.create-playlist-btn i {
+  margin-right: 8px;
+}
+
+.playlist-tips {
+  background-color: #f8f8f8;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.playlist-tips h5 {
+  font-size: 16px;
+  color: #0d0d0d;
+  margin-bottom: 15px;
+}
+
+.playlist-tips h5 i {
+  color: #ffc107;
+  margin-right: 8px;
+}
+
+.playlist-tips ul {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+
+.playlist-tips li {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #606060;
+}
+
+.playlist-tips li:last-child {
+  margin-bottom: 0;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .playlist-creation-card-body {
+    padding: 20px;
+  }
+  
+  .playlist-options {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .privacy-option, .category-option {
+    width: 100%;
+  }
+  
+  .playlist-cover-options {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .cover-preview {
+    width: 100%;
+    max-width: 180px;
+    margin-bottom: 15px;
+  }
+  
+  .cover-selection {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .cover-options {
+    justify-content: center;
+  }
+  
+  .playlist-creation-actions {
+    flex-direction: column;
+  }
+  
+  .playlist-creation-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.playlist-creation-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Индикаторы фокуса для доступности */
+.form-control:focus, .btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(204, 0, 0, 0.25);
+}
+</style>
+<div class="playlist-creation-container">
+    <div class="playlist-creation-header">
+        <h2>Создать плейлист рецептов</h2>
+        <p class="playlist-creation-subtitle">Организуйте свои любимые рецепты для удобного доступа</p>
+    </div>
+    
+    <div class="playlist-creation-card">
+        <div class="playlist-creation-card-body">
+            <form method="POST" action="{{ url_for('create_playlist') }}" class="playlist-creation-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group playlist-name-group">
+                    <label for="name">Название плейлиста</label>
+                    <input type="text" name="name" id="name" class="form-control" placeholder="Например: Летние салаты, Десерты, Ужин за 30 минут..." required>
+                    <small class="form-text text-muted">Дайте короткое и понятное название вашему плейлисту</small>
+                </div>
+                
+                <div class="playlist-options">
+                    <div class="privacy-option">
+                        <h5>Приватность</h5>
+                        <div class="privacy-toggle">
+                            <div class="form-check">
+                                <input type="radio" name="privacy" id="public" value="public" class="form-check-input" checked>
+                                <label class="form-check-label" for="public">
+                                    <span class="privacy-icon public-icon"><i class="fas fa-globe"></i></span>
+                                    <span class="privacy-text">
+                                        <strong>Публичный</strong>
+                                        <span class="privacy-description">Доступен всем пользователям</span>
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input type="radio" name="privacy" id="private" value="private" class="form-check-input">
+                                <label class="form-check-label" for="private">
+                                    <span class="privacy-icon private-icon"><i class="fas fa-lock"></i></span>
+                                    <span class="privacy-text">
+                                        <strong>Приватный</strong>
+                                        <span class="privacy-description">Только вы можете видеть этот плейлист</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                <div class="playlist-creation-actions">
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.history.back();">Отмена</button>
+                    <button type="submit" class="btn btn-primary create-playlist-btn">
+                        <i class="fas fa-plus-circle"></i> Создать плейлист
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="playlist-tips">
+        <h5><i class="fas fa-lightbulb"></i> Советы по созданию плейлистов</h5>
+        <ul>
+            <li>Создавайте тематические плейлисты для разных поводов: праздничное меню, здоровое питание, быстрые рецепты</li>
+            <li>Добавляйте рецепты одного типа для удобного планирования питания</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    // Простой скрипт для отображения выбора обложки
+    document.querySelectorAll('.cover-option-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const coverId = this.getAttribute('data-cover');
+            document.getElementById('cover_id').value = coverId;
+            
+            // Убрать активный класс со всех кнопок
+            document.querySelectorAll('.cover-option-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Добавить активный класс на выбранную кнопку
+            this.classList.add('active');
+            
+            // Обновить превью (здесь можно было бы подставить реальные изображения)
+            document.getElementById('cover-preview-img').setAttribute('src', '/api/placeholder/400/320?' + coverId);
+        });
+    });
+</script>
+{% endblock %}

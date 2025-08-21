@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Видео Рецепты{% endblock %}</title>
+    <!-- Подключаем Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Подключаем пользовательские стили -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- В head -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.x/dist/plyr.css" />
+    <link rel="icon" href="{{ url_for('static', filename='images/logo_icon.png') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ru.min.js"></script>
+
+    <script>
+      moment.locale("ru");
+    </script>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+    <!--
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-info">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    -->
+    <div class="main">
+        <!-- ... -->
+        <div class="sidebar">
+            <div class="sidebar-section">
+              <div class="sidebar-item {% if request.endpoint == 'index' %}active{% endif %}"
+                   onclick="location.href='{{ url_for('index') }}'">
+                <i class="fas fa-home"></i><span>Главная</span>
+              </div>
+              <div class="sidebar-item {% if request.endpoint == 'subscriptions' %}active{% endif %}"
+                   onclick="location.href='{{ url_for('subscriptions') }}'">
+                <i class="fas fa-folder"></i><span>Подписки</span>
+              </div>
+            </div>
+            <div class="sidebar-section">
+              {# Все профильные страницы теперь ведут на /profile/<username>?tab=... #}
+              {% if current_user.is_authenticated %}
+                {% set pu = url_for('profile', username=current_user.username) %}
+                <div class="sidebar-item {% if request.endpoint=='profile' and request.args.get('tab','videos')=='videos' %}active{% endif %}"
+                     onclick="location.href='{{ pu }}?tab=videos'">
+                  <i class="fas fa-user"></i><span>Вы</span>
+                </div>
+                <div class="sidebar-item {% if request.endpoint=='profile' and request.args.get('tab')=='posts' %}active{% endif %}"
+                     onclick="location.href='{{ pu }}?tab=posts'">
+                  <i class="fas fa-thumbtack"></i><span>Посты</span>
+                </div>
+                <div class="sidebar-item {% if request.endpoint=='profile' and request.args.get('tab')=='playlists' %}active{% endif %}"
+                     onclick="location.href='{{ pu }}?tab=playlists'">
+                  <i class="fas fa-play-circle"></i><span>Плейлисты</span>
+                </div>
+                <div class="sidebar-item {% if request.endpoint=='profile' and request.args.get('tab')=='history' %}active{% endif %}"
+                     onclick="location.href='{{ pu }}?tab=history'">
+                  <i class="fas fa-history"></i><span>История</span>
+                </div>
+                <div class="sidebar-item {% if request.endpoint=='watch_later' %}active{% endif %}" onclick="location.href='{{ url_for('watch_later') }}'">
+                    <i class="fas fa-clock"></i><span>Смотреть позже</span>
+                </div>
+                <div class="sidebar-item {% if request.endpoint=='liked' %}active{% endif %}" onclick="location.href='{{ url_for('liked') }}'">
+                    <i class="fas fa-thumbs-up"></i><span>Понравившиеся</span>
+                </div>
+              {% endif %}
+            </div>
+        </div>
+          
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    <!-- Подключаем jQuery и Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plyr@3.x/dist/plyr.polyfilled.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

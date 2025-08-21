@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Прямой эфир{% endblock %}
+
+{% block content %}
+<h2>Прямой эфир</h2>
+<!-- Здесь можно встроить плеер для стрима или ссылку на стриминговый сервис -->
+<video id="livestream" controls autoplay>
+    <source src="{{ url_for('static', filename='streams/live.m3u8') }}" type="application/x-mpegURL">
+    Ваш браузер не поддерживает потоковое видео.
+</video>
+{% endblock %}

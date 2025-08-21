@@ -1,0 +1,227 @@
+{% extends 'admin/base.html' %}
+{% block title %}Админ: Жалобы{% endblock %}
+
+{% block admin_content %}
+
+<div class="content-header">
+  <h1>Управление жалобами</h1>
+  <div>
+    <span class="badge bg-primary">Всего: {{ reports|length }}</span>
+  </div>
+</div>
+
+<div class="filter-container">
+  <div class="row g-2">
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-film"></i></span>
+        <input id="filterVideo" class="form-control" placeholder="Название видео">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-user"></i></span>
+        <input id="filterAuthor" class="form-control" placeholder="Автор видео">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-flag"></i></span>
+        <input id="filterReporter" class="form-control" placeholder="Отправитель жалобы">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+        <input type="date" id="filterDateFrom" class="form-control" title="Дата от">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+        <input type="date" id="filterDateTo" class="form-control" title="Дата до">
+      </div>
+    </div>
+  </div>
+  <div class="row mt-2">
+    <div class="col-md-12">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-filter"></i></span>
+        <select id="filterStatus" class="form-select">
+          <option value="">Статус – все</option>
+          <option value="новая">Новые</option>
+          <option value="обработана">Обработанные</option>
+        </select>
+        <button class="btn btn-primary" id="resetFilters">
+          <i class="fas fa-sync-alt me-1"></i>Сбросить фильтры
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="data-table">
+  <table id="reportsTable" class="table table-hover">
+    <thead>
+      <tr>
+        <th width="5%">ID</th>
+        <th width="20%">Видео</th>
+        <th width="12%">Автор видео</th>
+        <th width="12%">Жалоба от</th>
+        <th width="20%">Причина</th>
+        <th width="10%">Дата</th>
+        <th width="8%">Статус</th>
+        <th width="13%">Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr class="{% if r.resolved %}table-secondary{% endif %}">
+        <td>{{ r.report_id }}</td>
+        <td>
+          <a href="{{ url_for('watch_video', video_id=r.video.video_id) }}" class="text-decoration-none">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm me-2 bg-light rounded d-flex align-items-center justify-content-center">
+                <i class="fas fa-film text-secondary"></i>
+              </div>
+              <div class="text-truncate" style="max-width: 150px;">{{ r.video.title }}</div>
+            </div>
+          </a>
+        </td>
+        <td>
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-2 bg-light rounded-circle d-flex align-items-center justify-content-center">
+              <i class="fas fa-user text-secondary"></i>
+            </div>
+            <div>{{ r.video.author.username }}</div>
+          </div>
+        </td>
+        <td>{{ r.reporter.username }}</td>
+        <td>
+          <div class="report-content">
+            <div class="short-reason text-truncate" style="max-width: 200px;">{{ r.reason|truncate(50) }}</div>
+            <div class="full-reason d-none" style="word-wrap: break-word; max-width: 200px;">{{ r.reason }}</div>
+            <button class="btn btn-sm btn-link p-0 mt-1 toggle-reason">Показать полностью</button>
+          </div>
+        </td>
+        <td>{{ r.created_at.strftime('%Y-%m-%d') }}</td>
+        <td>
+          {% if r.resolved %}
+            <span class="badge bg-secondary"><i class="fas fa-check-circle me-1"></i>Обработана</span>
+          {% else %}
+            <span class="badge bg-warning"><i class="fas fa-exclamation-circle me-1"></i>Новая</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not r.resolved %}
+            <div class="d-flex">
+              <form method="post" action="{{ url_for('admin.ban_reported_video', report_id=r.report_id) }}" class="me-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-danger">
+                  <i class="fas fa-ban me-1"></i>Бан
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('admin.ignore_report', report_id=r.report_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-secondary">
+                  <i class="fas fa-times me-1"></i>Игнорировать
+                </button>
+              </form>
+            </div>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Настройка кнопок "Показать полностью"
+  document.querySelectorAll('.toggle-reason').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const contentDiv = btn.closest('.report-content');
+      const shortText = contentDiv.querySelector('.short-reason');
+      const fullText = contentDiv.querySelector('.full-reason');
+      
+      const isHidden = fullText.classList.contains('d-none');
+      if (isHidden) {
+        shortText.classList.add('d-none');
+        fullText.classList.remove('d-none');
+        btn.textContent = 'Скрыть';
+      } else {
+        shortText.classList.remove('d-none');
+        fullText.classList.add('d-none');
+        btn.textContent = 'Показать полностью';
+      }
+    });
+  });
+
+  const rows = Array.from(document.querySelectorAll('#reportsTable tbody tr'));
+  const fVideo = document.getElementById('filterVideo');
+  const fAuthor = document.getElementById('filterAuthor');
+  const fReporter = document.getElementById('filterReporter');
+  const fDateFrom = document.getElementById('filterDateFrom');
+  const fDateTo = document.getElementById('filterDateTo');
+  const fStatus = document.getElementById('filterStatus');
+  const resetBtn = document.getElementById('resetFilters');
+  
+  function applyFilter() {
+    const vVideo = fVideo.value.trim().toLowerCase();
+    const vAuthor = fAuthor.value.trim().toLowerCase();
+    const vReporter = fReporter.value.trim().toLowerCase();
+    const dateFrom = fDateFrom.value ? new Date(fDateFrom.value) : null;
+    const dateTo = fDateTo.value ? new Date(fDateTo.value) : null;
+    const vStatus = fStatus.value.toLowerCase();
+
+    let count = 0;
+
+    rows.forEach(row => {
+      const cols = row.children;
+      const video = cols[1].textContent.toLowerCase();
+      const author = cols[2].textContent.toLowerCase();
+      const reporter = cols[3].textContent.toLowerCase();
+      const dateStr = cols[5].textContent.trim(); // "YYYY-MM-DD"
+      const date = dateStr ? new Date(dateStr) : null;
+      const status = cols[6].textContent.trim().toLowerCase();
+
+      const okVideo = !vVideo || video.includes(vVideo);
+      const okAuthor = !vAuthor || author.includes(vAuthor);
+      const okReporter = !vReporter || reporter.includes(vReporter);
+      const okDateFrom = !dateFrom || (date && date >= dateFrom);
+      const okDateTo = !dateTo || (date && date <= dateTo);
+      const okStatus = !vStatus || status.includes(vStatus);
+
+      const visible = (okVideo && okAuthor && okReporter && okDateFrom && okDateTo && okStatus);
+      row.style.display = visible ? '' : 'none';
+      if (visible) count++;
+    });
+    
+    document.querySelector('.badge.bg-primary').textContent = `Показано: ${count} из ${rows.length}`;
+  }
+  
+  function resetFilters() {
+    fVideo.value = '';
+    fAuthor.value = '';
+    fReporter.value = '';
+    fDateFrom.value = '';
+    fDateTo.value = '';
+    fStatus.value = '';
+    
+    rows.forEach(row => {
+      row.style.display = '';
+    });
+    
+    document.querySelector('.badge.bg-primary').textContent = `Всего: ${rows.length}`;
+  }
+  
+  // Навешиваем обработчики
+  [fVideo, fAuthor, fReporter, fDateFrom, fDateTo].forEach(el =>
+    el.addEventListener('input', applyFilter)
+  );
+  fStatus.addEventListener('change', applyFilter);
+  resetBtn.addEventListener('click', resetFilters);
+});
+</script>
+{% endblock %}

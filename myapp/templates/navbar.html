@@ -1,0 +1,553 @@
+<div class="header">
+    <div class="header-left">
+        <!--<i class="fas fa-bars"></i>-->
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Видео Рецепты">
+    </div>
+    <div class="header-search">
+        <form method="GET" action="{{ url_for('search') }}">
+            <input name="q" type="text" placeholder="Введите запрос" value="{{ request.args.get('q', '') }}">
+            <button type="submit"><i class="fas fa-search"></i></button>
+        </form>
+        <!--<i class="fas fa-microphone icon" style="margin-left: 10px;"></i>-->
+    </div>
+    <div class="header-icons">
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <div class="admin-button" style="position: relative; color: rgb(0,0,0); cursor: pointer; margin-right: 10px;">
+        <a style="color:black" href="{{ url_for('admin.dashboard') }}" class="text-decoration-none">
+            <i style="margin-right:0px" class="fas fa-cog icon"></i> Админка
+        </a>
+        </div>
+        {% endif %}
+
+        {% if current_user.is_authenticated %}
+        <div class="create-button" style="position: relative; color:rgb(0, 0, 0); cursor: pointer;">
+            <i class="fas fa-plus icon"></i>
+        </div>
+        <!-- Панель создания контента -->
+        <div class="create-panel">
+            <div class="create-panel-item" onclick="window.location.href='{{ url_for('upload') }}'">
+                <i class="fas fa-video"></i>
+                <span>Добавить видео</span>
+            </div>
+            <div class="create-panel-item" onclick="window.location.href='{{ url_for('create_post') }}'">
+                <i class="fas fa-edit"></i>
+                <span>Создать пост</span>
+            </div>
+            <div class="create-panel-item" onclick="window.location.href='{{ url_for('create_playlist') }}'">
+                <i class="fas fa-list"></i>
+                <span>Создать плейлист</span>
+            </div>
+        </div>
+        <!-- Изменение для кнопки уведомлений - добавляем класс и удаляем href -->
+        <div class="notification-button" style="position: relative; color:rgb(0, 0, 0); cursor: pointer;">
+            <i class="fas fa-bell icon"></i>
+            <!-- Индикатор новых уведомлений (опционально) -->
+            {% if current_user.has_new_notifications %}
+            <span class="notification-indicator"></span>
+            {% endif %}
+        </div>
+        <div>
+            <a href="{{ url_for('profile', username=current_user.username) }}">
+                <img class="profile-icon" src="{{ url_for('static', filename='uploads/' ~ (current_user.profile_picture or 'default.jpg')) }}" alt="{{ current_user.username }}" class="img-thumbnail mb-3">
+            </a>
+        </div>
+        {% else %}
+        <div class="auth-buttons">
+            <a href="{{ url_for('login') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-sign-in-alt"></i> Войти
+            </a>
+            <a href="{{ url_for('register') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Регистрация
+            </a>
+        </div>
+        
+        {% endif %}
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Находим кнопку создания контента
+        const createButton = document.querySelector('.create-button');
+        
+        // Находим панель создания контента
+        const createPanel = document.querySelector('.create-panel');
+        
+        // Обработчик клика по кнопке создания контента
+        createButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Если панель скрыта, показываем её
+            if (createPanel.style.display === 'none' || createPanel.style.display === '') {
+                createPanel.style.display = 'block';
+                
+                // Закрываем панель уведомлений, если она открыта
+                const notificationsPanel = document.querySelector('.notifications-panel');
+                if (notificationsPanel && notificationsPanel.style.display === 'block') {
+                    notificationsPanel.style.display = 'none';
+                }
+            } else {
+                // Иначе скрываем
+                createPanel.style.display = 'none';
+            }
+        });
+        
+        // Закрытие панели при клике вне её
+        document.addEventListener('click', function(e) {
+            if (createPanel.style.display === 'block' && 
+                !createPanel.contains(e.target) && 
+                e.target !== createButton && 
+                !createButton.contains(e.target)) {
+                createPanel.style.display = 'none';
+            }
+        });
+        
+        // Предотвращение закрытия при клике внутри панели
+        createPanel.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Находим кнопку уведомлений
+        const notificationButton = document.querySelector('.fa-bell').parentElement;
+        
+        // Создаем панель уведомлений
+        const notificationsPanel = document.createElement('div');
+        notificationsPanel.className = 'notifications-panel';
+        notificationsPanel.style.display = 'none';
+        
+        // Добавляем заголовок и кнопку настроек
+        const panelHeader = document.createElement('div');
+        panelHeader.className = 'notifications-header';
+        panelHeader.innerHTML = `
+            <div class="notifications-title">Уведомления</div>
+            <!--<a href="#" class="notifications-settings"><i class="fas fa-cog"></i></a>
+    -->        `;
+        notificationsPanel.appendChild(panelHeader);
+        
+        // Создаем единую секцию для всех уведомлений
+        const allNotificationsSection = document.createElement('div');
+        allNotificationsSection.className = 'notifications-section';
+        
+        const notificationsList = document.createElement('div');
+        notificationsList.className = 'notifications-list';
+        
+        allNotificationsSection.appendChild(notificationsList);
+        notificationsPanel.appendChild(allNotificationsSection);
+        
+        // Добавляем панель уведомлений в DOM после кнопки уведомлений
+        notificationButton.parentNode.appendChild(notificationsPanel);
+        
+        // Обработчик клика по кнопке уведомлений
+        notificationButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Если панель скрыта, показываем её
+            if (notificationsPanel.style.display === 'none') {
+                notificationsPanel.style.display = 'block';
+                
+                // Загружаем уведомления, если ещё не загружены
+                if (!notificationsPanel.dataset.loaded) {
+                    loadNotifications();
+                    notificationsPanel.dataset.loaded = 'true';
+                }
+            } else {
+                // Иначе скрываем
+                notificationsPanel.style.display = 'none';
+            }
+        });
+        
+        // Закрытие панели при клике вне её
+        document.addEventListener('click', function(e) {
+            if (notificationsPanel.style.display === 'block' && 
+                !notificationsPanel.contains(e.target) && 
+                e.target !== notificationButton) {
+                notificationsPanel.style.display = 'none';
+            }
+        });
+        
+        // Функция загрузки уведомлений с сервера
+        function loadNotifications() {
+            // Получаем список уведомлений
+            const notificationsList = document.querySelector('.notifications-list');
+            notificationsList.innerHTML = '<div class="notification-loading">Загрузка уведомлений...</div>';
+            
+            // Запрос к API
+            fetch('/api/notifications')
+                .then(response => response.json())
+                .then(notifications => {
+                    notificationsList.innerHTML = '';
+                    
+                    if (notifications.length === 0) {
+                        notificationsList.innerHTML = '<div class="notification-empty">У вас нет уведомлений</div>';
+                        return;
+                    }
+                    
+                    // Добавляем все уведомления в список
+                    notifications.forEach(notification => {
+                        notificationsList.appendChild(createNotificationItem(notification));
+                    });
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке уведомлений:', error);
+                    notificationsList.innerHTML = '<div class="notification-error">Не удалось загрузить уведомления</div>';
+                });
+        }
+        
+        // Функция для форматирования даты (относительное время)
+        function formatRelativeTime(dateString) {
+            return moment(dateString).fromNow();
+        }
+        
+        // Функция для правильного склонения слов
+        function formatWord(count, words) {
+            const cases = [2, 0, 1, 1, 1, 2];
+            return words[(count % 100 > 4 && count % 100 < 20) ? 2 : cases[(count % 10 < 5) ? count % 10 : 5]];
+        }
+        
+        function createNotificationItem(data) {
+            const item = document.createElement('div');
+            item.className = 'notification-item';
+            item.dataset.id = data.id;
+            if (data.read) {
+                item.classList.add('notification-read');
+            }
+            
+            // --- Аватар ---
+            const avatar = document.createElement('img');
+            avatar.src = data.actor.avatar;
+            avatar.alt = data.actor.username;
+            avatar.className = 'notification-avatar';
+            item.appendChild(avatar);
+        
+            // --- Детали уведомления ---
+            const details = document.createElement('div');
+            details.className = 'notification-details';
+            // 1. Имя отправителя (если видео)
+            if (data.verb === 'uploaded_video') {
+                const sender = document.createElement('div');
+                sender.className = 'notification-message';
+                sender.textContent = `Для вас: ${data.actor.username}`;
+                details.appendChild(sender);
+            }
+            // 2. Сообщение (если есть)
+            if (data.verb === 'reply_comment' || data.verb === 'subscribed') {
+                const message = document.createElement('div');
+                message.className = 'notification-message';
+                message.textContent = data.message;
+                details.appendChild(message);
+            }
+        
+            // 3. Время
+            const time = document.createElement('div');
+            time.className = 'notification-time';
+            time.textContent = formatRelativeTime(data.created_at);
+            details.appendChild(time);
+        
+        
+            item.appendChild(details);
+        
+            // --- Обложка видео (вне details) ---
+            if (data.verb === 'uploaded_video') {
+                const thumbnail = document.createElement('img');
+                thumbnail.src = data.video.thumbnail;
+                thumbnail.alt = data.video.title;
+                thumbnail.className = 'notification-thumbnail';
+                item.appendChild(thumbnail);  // добавляем обложку уже после .notification-details
+            }
+        
+            // --- Меню действий ---
+            const actions = document.createElement('div');
+            actions.className = 'notification-actions';
+        
+            const menu = document.createElement('div');
+            menu.className = 'notification-menu';
+            menu.innerHTML = `<i class="fas fa-ellipsis-v"></i>`;
+            actions.appendChild(menu);
+            item.appendChild(actions);
+        
+            // --- Обработчики ---
+            item.addEventListener('click', function(e) {
+                if (!e.target.closest('.notification-menu')) {
+                    // Переход по ссылке в зависимости от типа уведомления
+                    switch (data.verb) {
+                        case 'uploaded_video':
+                            window.location.href = `/video/${data.video.id}`;
+                            break;
+                        case 'reply_comment':
+                            window.location.href = `/video/${data.video.id}`;
+                            break;
+                        case 'subscribed':
+                            window.location.href = `/profile/${data.actor.username}`;
+                            break;
+                    }
+                    
+                }
+            });
+
+        
+            menu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showNotificationOptions(this, data);
+            });
+        
+            return item;
+        }
+        
+        // Функция для открытия модального окна с уведомлением
+        function openNotificationModal(data) {
+            // Проверяем, существует ли уже модальное окно
+            let modalOverlay = document.querySelector('.notification-modal-overlay');
+            
+            if (!modalOverlay) {
+                // Создаем элементы модального окна
+                modalOverlay = document.createElement('div');
+                modalOverlay.className = 'notification-modal-overlay';
+                
+                const modalContainer = document.createElement('div');
+                modalContainer.className = 'notification-modal-container';
+                
+                const modalContent = document.createElement('div');
+                modalContent.className = 'notification-modal-content';
+                
+                const modalHeader = document.createElement('div');
+                modalHeader.className = 'notification-modal-header';
+                
+                const modalTitle = document.createElement('h3');
+                modalTitle.className = 'notification-modal-title';
+                
+                const modalClose = document.createElement('button');
+                modalClose.className = 'notification-modal-close';
+                modalClose.innerHTML = '&times;';
+                
+                const modalBody = document.createElement('div');
+                modalBody.className = 'notification-modal-body';
+                
+                // Собираем структуру модального окна
+                modalHeader.appendChild(modalTitle);
+                modalHeader.appendChild(modalClose);
+                modalContent.appendChild(modalHeader);
+                modalContent.appendChild(modalBody);
+                modalContainer.appendChild(modalContent);
+                modalOverlay.appendChild(modalContainer);
+                document.body.appendChild(modalOverlay);
+                
+                // Обработчик для закрытия модального окна
+                modalClose.addEventListener('click', function() {
+                    modalOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                });
+                
+                // Закрытие модального окна при клике вне его
+                modalOverlay.addEventListener('click', function(e) {
+                    if (e.target === modalOverlay) {
+                        modalOverlay.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+            }
+            
+            // Заполняем модальное окно данными в зависимости от типа уведомления
+            const modalTitle = modalOverlay.querySelector('.notification-modal-title');
+            const modalBody = modalOverlay.querySelector('.notification-modal-body');
+            
+            modalTitle.textContent = data.actor.username;
+            
+            // Базовая структура заголовка
+            let modalContent = `
+                <div class="notification-modal-content-header">
+                    <img src="${data.actor.avatar}" alt="${data.actor.username}" class="notification-modal-avatar">
+                    <div>
+                        <div class="notification-modal-sender">${data.actor.username}</div>
+                        <div class="notification-modal-time">${formatRelativeTime(data.created_at)}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Специфичное содержимое для каждого типа уведомления
+            if (data.verb === 'uploaded_video') {
+                modalContent += `
+                    <div class="notification-modal-message">
+                        <p>Для вас: ${data.actor.username} загрузил новое видео "${data.video.title}"</p>
+                        <div class="notification-modal-thumbnail">
+                            <img src="${data.video.thumbnail}" alt="${data.video.title}">
+                        </div>
+                        <div class="notification-modal-actions">
+                            <a href="/video/${data.video.id}" class="notification-modal-button">Смотреть видео</a>
+                        </div>
+                    </div>
+                `;
+            } else if (data.verb === 'reply_comment') {
+                modalContent += `
+                    <div class="notification-modal-message">
+                        <p>${data.message}</p>
+                        <div class="notification-modal-actions">
+                            <a href="/comment/${data.target_comment_id}" class="notification-modal-button">Перейти к комментарию</a>
+                        </div>
+                    </div>
+                `;
+            } else if (data.verb === 'subscribed') {
+                modalContent += `
+                    <div class="notification-modal-message">
+                        <p>${data.message}</p>
+                        <div class="notification-modal-actions">
+                            <a href="/profile/${data.actor.username}" class="notification-modal-button">Просмотреть профиль</a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            modalBody.innerHTML = modalContent;
+            
+            // Показываем модальное окно
+            modalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Запрещаем прокрутку страницы
+            
+            // Отмечаем уведомление как прочитанное
+            markNotificationAsRead(data.id);
+        }
+        
+        // Функция для отметки уведомления как прочитанного
+        function markNotificationAsRead(notificationId) {
+            fetch(`/api/notifications/${notificationId}/read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}' // Функция для получения CSRF токена из куки
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Обновляем визуальное состояние уведомления
+                    const notificationItem = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+                    if (notificationItem) {
+                        notificationItem.classList.add('notification-read');
+                    }
+                }
+            })
+            .catch(error => console.error('Ошибка при отметке уведомления как прочитанного:', error));
+        }
+        function markNotificationAsUnread(notificationId) {
+            fetch(`/api/notifications/${notificationId}/unread`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    const notificationItem = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+                    if (notificationItem) {
+                        notificationItem.classList.remove('notification-read');
+                    }
+                }
+            })
+            .catch(error => console.error('Ошибка при снятии отметки прочитанного:', error));
+        }
+        
+        // Функция для получения CSRF токена из куки
+        function getCSRFToken() {
+            const name = 'csrf_token={{ csrf_token() }}';
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const cookieArray = decodedCookie.split(';');
+            
+            for (let i = 0; i < cookieArray.length; i++) {
+                let cookie = cookieArray[i].trim();
+                if (cookie.indexOf(name) === 0) {
+                    return cookie.substring(name.length, cookie.length);
+                }
+            }
+            return '';
+        }
+        
+        // Функция для показа меню действий с уведомлением
+        function showNotificationOptions(menuElement, data) {
+            const existingMenu = document.querySelector('.notification-options-menu');
+        
+            // Если меню уже открыто и клик по тому же элементу — закрыть его
+            if (existingMenu && existingMenu.dataset.ownerId === menuElement.dataset.ownerId) {
+                existingMenu.remove();
+                return;
+            }
+        
+            // Удаляем предыдущее меню (если клик был по другому уведомлению)
+            if (existingMenu) {
+                existingMenu.remove();
+            }
+        
+            // Создаем меню
+            const optionsMenu = document.createElement('div');
+            optionsMenu.className = 'notification-options-menu';
+        
+            // Запоминаем, кто открыл это меню (для повторного клика)
+            const uniqueId = `${data.id}_${Math.random()}`;
+            optionsMenu.dataset.ownerId = uniqueId;
+            menuElement.dataset.ownerId = uniqueId;
+        
+            const alreadyRead = data.read;
+            optionsMenu.innerHTML = `
+                <ul>
+                    <li data-action="${alreadyRead ? 'unread' : 'read'}">
+                        ${alreadyRead ? 'Отметить как непрочитанное' : 'Отметить как прочитанное'}
+                    </li>
+                    <li data-action="hide">Скрыть это уведомление</li>
+                </ul>
+            `;
+        
+            // Позиционируем
+            const rect = menuElement.getBoundingClientRect();
+            optionsMenu.style.position = 'absolute';
+            optionsMenu.style.top = `${rect.bottom}px`;
+            optionsMenu.style.right = `${window.innerWidth - rect.right}px`;
+        
+            document.body.appendChild(optionsMenu);
+        
+            // Обработчики пунктов меню
+            optionsMenu.querySelectorAll('li').forEach(item => {
+                item.addEventListener('click', function() {
+                    const action = this.dataset.action;
+        
+                    if (action === 'read') {
+                        markNotificationAsRead(data.id);
+                        menuElement.closest('.notification-item').classList.add('notification-read');
+                        data.read = true;
+                    } else if (action === 'unread') {
+                        markNotificationAsUnread(data.id);
+                        menuElement.closest('.notification-item').classList.remove('notification-read');
+                        data.read = false;
+                    } else if (action === 'hide') {
+                        hideNotification(data.id);
+                        menuElement.closest('.notification-item').style.display = 'none';
+                    }
+        
+                    optionsMenu.remove();
+                });
+            });
+        
+            // Закрытие меню вне клика
+            document.addEventListener('click', function closeMenu(e) {
+                if (!optionsMenu.contains(e.target) && !menuElement.contains(e.target)) {
+                    optionsMenu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        }
+        
+        
+        // Функция для скрытия уведомления
+        function hideNotification(notificationId) {
+            fetch(`/api/notifications/${notificationId}/hide`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .catch(error => console.error('Ошибка при скрытии уведомления:', error));
+        }
+    });
+</script>

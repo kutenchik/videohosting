@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}История просмотров{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">История просмотров</h1>
+    {% if view_history %}
+        <div class="list-group">
+            {% for history in view_history %}
+                <div class="list-group-item d-flex align-items-center justify-content-between">
+                    <a href="{{ url_for('watch_video', video_id=history.video.video_id) }}"
+                       class="d-flex align-items-center text-decoration-none">
+                        <img src="{{ url_for('static', filename='thumbnails/' ~ (history.video.thumbnail_url or 'default_thumbnail.jpg')) }}"
+                             alt="{{ history.video.title }}"
+                             class="img-thumbnail mr-3"
+                             style="width: 150px; height: auto;">
+                        <div>
+                            <h5 class="mb-1">{{ history.video.title }}</h5>
+                            <p class="mb-1 text-muted">Просмотрено: {{ history.viewed_at.strftime('%d %B %Y, %H:%M') }}</p>
+                            <small class="text-muted">Автор: {{ history.video.author.username }}</small>
+                        </div>
+                    </a>
+                    <!-- Форма удаления записи -->
+                    <form action="{{ url_for('delete_history', history_id=history.id) }}" method="POST" onsubmit="return confirm('Удалить эту запись?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Ваша история просмотров пуста.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Понравившиеся{% endblock %}
+{% block content %}
+<h2 class="mt-4 mb-3">Понравившиеся видео</h2>
+<div class="videos-container">
+    {% for video in liked_videos %}
+    <div class="video-card">
+        <a href="{{ url_for('watch_video', video_id=video.video_id) }}">
+            <div class="thumbnail">
+                <img src="{{ url_for('static', filename='thumbnails/' ~ (video.thumbnail_url or 'default.jpg')) }}" alt="{{ video.title }}">
+                {% if video.duration %}
+                    {% set m = video.duration // 60 %}
+                    {% set s = video.duration % 60 %}
+                    <div class="duration">{{ m }}:{{ '%02d'|format(s) }}</div>
+                {% endif %}
+            </div>
+            <div class="video-info">
+                <div class="channel-icon">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (video.author.profile_picture or 'default.jpg')) }}" alt="{{ video.author.username }}">
+                </div>
+                <div class="video-detail">
+                    <div class="title">{{ video.title }}</div>
+                    <div class="channel-name">{{ video.author.username }}</div>
+                    <div class="metadata">{{ video.views }} просмотров • {{ video.upload_date.strftime('%d %B %Y') }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <p>Вы ещё не лайкали ни одно видео.</p>
+    {% endfor %}
+</div>
+{% endblock %}

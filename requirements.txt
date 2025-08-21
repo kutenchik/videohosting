@@ -1,0 +1,15 @@
+alembic==1.14.0
+Flask==2.2.3
+flask_dance==7.1.0
+flask_limiter==3.12
+Flask_Login==0.6.2
+flask_mail==0.10.0
+Flask_Migrate==4.0.4
+Flask_Moment==1.0.6
+Flask_SQLAlchemy==2.5.1
+Flask_WTF==1.0.1
+itsdangerous==2.2.0
+python-dotenv==1.1.0
+SQLAlchemy==1.4.41
+Werkzeug==2.2.3
+WTForms==3.0.1

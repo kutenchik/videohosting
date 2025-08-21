@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ playlist.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ playlist.name }}</h2>
+    <p>Создан: {{ playlist.created_at.strftime('%d %B %Y') }}</p>
+    <hr>
+    <div class="videos-container">
+        {% for video in videos %}
+        <div class="video-card">
+            <a href="{{ url_for('watch_video', video_id=video.video_id, playlist_id=playlist.playlist_id) }}" class="thumbnail-link">
+            <div class="thumbnail">
+                <img src="{{ url_for('static', filename='thumbnails/' ~ (video.thumbnail_url or 'default_thumbnail.jpg')) }}" alt="{{ video.title }}">
+                <div class="duration">{% if video.duration %}
+                    <!-- Если у вас есть длительность (в секундах) -->
+                    {% set minutes = video.duration // 60 %}
+                    {% set seconds = video.duration % 60 %}
+                    {{ minutes }}:{{ '%02d'|format(seconds) }}
+                {% endif %}</div>
+            </div>
+            <div class="video-info">
+                <div class="channel-icon">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (video.author.profile_picture or 'default.jpg')) }}"
+                                 class="channel-avatar"
+                                 alt="{{ video.author.username }}">
+                </div>
+                <div class="video-detail">
+                    <div class="title">{{ video.title }}</div>
+                    <div class="channel-name">{{ video.author.username }}</div>
+                    <div class="metadata">{{ video.views }} просмотров</div>
+                </div>
+            </div>
+            </a>
+        </div>
+        {% else %}
+            <p>В этом плейлисте нет видео.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

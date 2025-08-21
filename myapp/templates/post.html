@@ -1,0 +1,589 @@
+{% extends 'base.html' %}
+
+{% block title %}Создать публикацию{% endblock %}
+
+{% block content %}
+<style>
+    /* Custom CSS for forms - create_post.html and create_playlist.html */
+
+/* General Form Styling */
+.card {
+  border: none;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+.shadow-sm {
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05) !important;
+}
+
+.form-label {
+  color: #303030;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.form-control {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: #9370db;
+  box-shadow: 0 0 0 3px rgba(147, 112, 219, 0.15);
+}
+
+.form-control::placeholder {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.form-text {
+  font-size: 0.8rem;
+  margin-top: 6px;
+  color: #757575;
+}
+
+.input-group-text {
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  color: #606060;
+  padding: 0 15px;
+}
+
+.input-group .form-control {
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Custom File Upload */
+input[type="file"].form-control {
+  padding: 3px;
+  background-color: #f9f9f9;
+  color: #606060;
+}
+
+#image-preview {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+#image-preview img {
+  max-height: 200px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Switch Toggle */
+.form-check-input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.form-switch .form-check-input {
+  width: 45px;
+  height: 22px;
+}
+
+.form-switch .form-check-input:checked {
+  background-color: #9370db;
+  border-color: #9370db;
+}
+
+.form-check-label {
+  padding-left: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Poll Options Section */
+#poll-options-group .card {
+  background-color: #f8f8f8;
+  border: 1px solid #f0f0f0;
+}
+
+#poll-options-group textarea {
+  background-color: #fff;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #9370db;
+  border-color: #9370db;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: #8a60d9;
+  border-color: #8a60d9;
+  box-shadow: 0 4px 8px rgba(147, 112, 219, 0.25);
+}
+
+.btn-outline-secondary {
+  border-color: #d0d0d0;
+  color: #606060;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #f0f0f0;
+  color: #505050;
+}
+
+.btn-outline-danger {
+  border-color: #ffcfcf;
+  color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+  background-color: #fff0f0;
+  color: #c82333;
+}
+
+/* Tips Card */
+.card .list-unstyled li {
+  display: flex;
+  align-items: flex-start;
+  padding: 5px 0;
+}
+
+.card .list-unstyled li i {
+  margin-top: 3px;
+}
+
+/* Form Select */
+.form-select {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  height: auto;
+  background-position: right 12px center;
+}
+
+.form-select:focus {
+  border-color: #9370db;
+  box-shadow: 0 0 0 3px rgba(147, 112, 219, 0.15);
+}
+
+/* Card Settings Group */
+.card.bg-light {
+  background-color: #f9f9f9 !important;
+  border: 1px solid #f0f0f0;
+}
+
+/* Spacing */
+.mt-4 {
+  margin-top: 2rem !important;
+}
+
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  
+  .col-lg-8, .col-lg-6 {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  .card-body {
+    padding: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#poll-options-group {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Error Handling */
+.is-invalid {
+  border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+  color: #dc3545;
+  font-size: 80%;
+  margin-top: 0.25rem;
+}
+
+/* Custom Section Backgrounds */
+.bg-light {
+  background-color: #f9f9f9 !important;
+}
+
+
+
+.text-success {
+  color: #28a745 !important;
+}
+
+/* Custom Card Header */
+h3.mb-0 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #303030;
+}
+
+h5 {
+  color: #404040;
+  font-weight: 600;
+}
+
+/* Remove Image Button Custom Style */
+#remove-image {
+  transition: all 0.3s ease;
+}
+
+#remove-image:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+/* Special styling for create_post.html */
+
+/* Container styling */
+.container.mt-4 {
+  padding-top: 20px;
+  padding-bottom: 40px;
+}
+
+/* Card styling */
+.card {
+  border: none;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.card-header {
+  background: linear-gradient(to right, #9370db, #a08be2);
+  padding: 20px 24px;
+  border: none;
+}
+
+.card-header h3 {
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.card-body {
+  padding: 30px;
+}
+
+/* Form controls */
+.form-control {
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid #e6e6e6;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #9370db;
+  box-shadow: 0 0 0 4px rgba(147, 112, 219, 0.15);
+}
+
+textarea.form-control {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Custom file upload */
+.custom-file-upload {
+  position: relative;
+}
+
+
+/* Image preview */
+#image-preview {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin-top: 15px;
+  transition: all 0.3s ease;
+}
+
+#image-preview img {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+}
+
+#remove-image {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+#remove-image:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+/* Poll toggle switch */
+.form-switch {
+  padding-left: 2.5em;
+}
+
+.form-switch .form-check-input {
+  width: 50px;
+  height: 24px;
+  margin-left: -2.5em;
+}
+
+.form-check-input:focus {
+  border-color: #9370db;
+  box-shadow: 0 0 0 3px rgba(147, 112, 219, 0.15);
+}
+
+.form-check-input:checked {
+  background-color: #9370db;
+  border-color: #9370db;
+}
+
+.form-check-label {
+  font-weight: 500;
+  color: #404040;
+}
+
+/* Poll options section */
+#poll-options-group {
+  animation: slideDown 0.3s ease-out;
+}
+
+#poll-options-group .card {
+  background-color: #f9f9f9;
+  border: 1px solid #efefef;
+  box-shadow: none;
+}
+
+#poll-options-group .card-body {
+  padding: 20px;
+}
+
+/* Labels */
+.form-label {
+  font-weight: 600;
+  color: #404040;
+  margin-bottom: 8px;
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(to right, #9370db, #a08be2);
+  border: none;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(to right, #8a60d9, #957ad9);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(147, 112, 219, 0.25);
+}
+
+.btn-outline-secondary {
+  border: 1px solid #d0d0d0;
+  color: #606060;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #f0f0f0;
+  color: #404040;
+}
+
+/* Icons */
+
+
+/* Helper text */
+small.text-muted, .form-text {
+  color: #808080 !important;
+  font-size: 0.85rem;
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card-body {
+    padding: 20px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+  }
+  
+  .form-control {
+    padding: 12px;
+  }
+}
+
+/* Focus states */
+button:focus, 
+input:focus, 
+textarea:focus, 
+select:focus {
+  outline: none;
+}
+</style>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0">Создать публикацию</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('create_post') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-4">
+                            {{ form.content.label(class="form-label fw-bold") }}
+                            {{ form.content(class="form-control", rows="5", placeholder="Поделитесь своими мыслями...") }}
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-image me-2" style="color: #606060;"></i>
+                                {{ form.image.label(class="form-label fw-bold mb-0") }}
+                            </div>
+                            <div class="custom-file-upload">
+                                {{ form.image(class="form-control", id="imageUpload") }}
+                            </div>
+                            <div id="image-preview" class="mt-2 d-none">
+                                <img src="" alt="Preview" class="img-fluid rounded" style="max-height: 200px;">
+                                <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="remove-image">Удалить</button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <div class="form-check form-switch">
+                                {{ form.is_poll(class="form-check-input", id="is_poll") }}
+                                {{ form.is_poll.label(class="form-check-label", for="is_poll") }}
+                                <small class="text-muted d-block mt-1">Создайте опрос и узнайте мнение других пользователей</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-4" id="poll-options-group" style="display: none;">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-poll me-2" style="color: #606060;"></i>
+                                        {{ form.poll_options.label(class="form-label fw-bold mb-0") }}
+                                    </div>
+                                    {{ form.poll_options(class="form-control", rows="4", placeholder="Введите варианты ответа, каждый с новой строки") }}
+                                    <small class="form-text text-muted">Добавьте до 10 вариантов ответа</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="#" class="btn btn-outline-secondary me-md-2">Отмена</a>
+                            <button type="submit" class="btn btn-primary px-4">{{ form.submit.label }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle poll options display
+    const isPollCheckbox = document.getElementById('is_poll');
+    const pollOptionsGroup = document.getElementById('poll-options-group');
+    
+    isPollCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            pollOptionsGroup.style.display = 'block';
+        } else {
+            pollOptionsGroup.style.display = 'none';
+        }
+    });
+    
+    // Image preview functionality
+    const imageUpload = document.getElementById('imageUpload');
+    const imagePreview = document.getElementById('image-preview');
+    const previewImage = imagePreview.querySelector('img');
+    const removeButton = document.getElementById('remove-image');
+    
+    imageUpload.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                imagePreview.classList.remove('d-none');
+            }
+            
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+    
+    removeButton.addEventListener('click', function() {
+        imageUpload.value = '';
+        imagePreview.classList.add('d-none');
+    });
+</script>
+{% endblock %}

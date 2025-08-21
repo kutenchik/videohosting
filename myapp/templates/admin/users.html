@@ -1,0 +1,177 @@
+{% extends 'admin/base.html' %}
+{% block title %}Админ: Пользователи{% endblock %}
+
+{% block admin_content %}
+<div class="content-header">
+  <h1>Управление пользователями</h1>
+  <div>
+    <span class="badge bg-primary">Всего: {{ users|length }}</span>
+  </div>
+</div>
+
+<div class="filter-container">
+  <div class="row g-2">
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-user"></i></span>
+        <input id="filterUsername" class="form-control" placeholder="Имя пользователя">
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+        <input id="filterEmail" class="form-control" placeholder="Email">
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-shield-alt"></i></span>
+        <select id="filterStatus" class="form-select">
+          <option value="">Статус – все</option>
+          <option value="активен">Активен</option>
+          <option value="забанен">Забанен</option>
+        </select>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+        <select id="filterRole" class="form-select">
+          <option value="">Роль – все</option>
+          <option value="админ">Админ</option>
+          <option value="пользователь">Пользователь</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="data-table">
+  <table id="usersTable" class="table table-hover">
+    <thead>
+      <tr>
+        <th width="5%">ID</th>
+        <th width="20%">Имя</th>
+        <th width="25%">Email</th>
+        <th width="15%">Статус</th>
+        <th width="15%">Роль</th>
+        <th width="20%">Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr class="{% if u.is_banned %}table-danger{% endif %}">
+        <td>{{ u.user_id }}</td>
+        <td>
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm me-2 bg-light rounded-circle d-flex align-items-center justify-content-center">
+              <i class="fas fa-user text-secondary"></i>
+            </div>
+            <div>{{ u.username }}</div>
+          </div>
+        </td>
+        <td>{{ u.email }}</td>
+        <td>
+          {% if u.is_banned %}
+            <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Забанен</span>
+          {% else %}
+            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Активен</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.is_admin %}
+            <span class="badge bg-primary"><i class="fas fa-user-shield me-1"></i>Админ</span>
+          {% else %}
+            <span class="badge bg-secondary"><i class="fas fa-user me-1"></i>Пользователь</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="btn-group">
+            {% if not u.is_banned and not u.is_admin %}
+            <form method="post" action="{{ url_for('admin.ban_user', user_id=u.user_id) }}" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-danger" title="Забанить">
+                <i class="fas fa-ban me-1"></i>Бан
+              </button>
+            </form>
+            {% endif %}
+            
+            {% if u.is_banned %}
+            <form method="post" action="{{ url_for('admin.unban_user', user_id=u.user_id) }}" class="d-inline ms-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-success" title="Разбанить">
+                <i class="fas fa-user-check me-1"></i>Разбан
+              </button>
+            </form>
+            {% endif %}
+            
+            {% if not u.is_admin %}
+            <form method="post" action="{{ url_for('admin.promote_user', user_id=u.user_id) }}" class="d-inline ms-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" title="Повысить до админа">
+                <i class="fas fa-arrow-up me-1"></i>Повысить
+              </button>
+            </form>
+            {% endif %}
+            
+            {% if u.is_admin %}
+            <form method="post" action="{{ url_for('admin.demote_user', user_id=u.user_id) }}" class="d-inline ms-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-secondary" title="Понизить до пользователя">
+                <i class="fas fa-arrow-down me-1"></i>Понизить
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows    = Array.from(document.querySelectorAll('#usersTable tbody tr'));
+  const fUser   = document.getElementById('filterUsername');
+  const fEmail  = document.getElementById('filterEmail');
+  const fStatus = document.getElementById('filterStatus');
+  const fRole   = document.getElementById('filterRole');
+
+  function applyFilter() {
+    const vUser   = fUser.value.trim().toLowerCase();
+    const vEmail  = fEmail.value.trim().toLowerCase();
+    const vStatus = fStatus.value;
+    const vRole   = fRole.value;
+
+    let count = 0;
+
+    rows.forEach(row => {
+      const cols   = row.children;
+      const user   = cols[1].textContent.toLowerCase();
+      const email  = cols[2].textContent.toLowerCase();
+      const status = cols[3].textContent.trim().toLowerCase();
+      const role   = cols[4].textContent.trim().toLowerCase();
+
+      const ok = (!vUser   || user.includes(vUser))
+              && (!vEmail  || email.includes(vEmail))
+              && (!vStatus || status.includes(vStatus))
+              && (!vRole   || role.includes(vRole));
+
+      row.style.display = ok ? '' : 'none';
+      if (ok) count++;
+    });
+    
+    document.querySelector('.badge.bg-primary').textContent = `Показано: ${count} из ${rows.length}`;
+  }
+
+  [fUser, fEmail].forEach(el => 
+    el.addEventListener('input', applyFilter)
+  );
+  
+  [fStatus, fRole].forEach(el => 
+    el.addEventListener('change', applyFilter)
+  );
+});
+</script>
+{% endblock %}

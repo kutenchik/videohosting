@@ -1,0 +1,58 @@
+{% extends 'admin/base.html' %}
+{% block title %}Панель администратора{% endblock %}
+{% block admin_content %}
+<div class="content-header">
+    <h1>Панель администратора</h1>
+    <div>
+      <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+  
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+      <div class="stat-card bg-primary text-white">
+        <div class="card-body">
+          <h5 class="card-title">Пользователи</h5>
+          <p class="card-text">{{ stats.users }}</p>
+          <i class="fas fa-users"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="stat-card bg-success text-white">
+        <div class="card-body">
+          <h5 class="card-title">Видео</h5>
+          <p class="card-text">{{ stats.videos }}</p>
+          <i class="fas fa-video"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="stat-card bg-warning">
+        <div class="card-body">
+          <h5 class="card-title">Комментарии</h5>
+          <p class="card-text">{{ stats.comments }}</p>
+          <i class="fas fa-comments"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="stat-card bg-info text-white">
+        <div class="card-body">
+          <h5 class="card-title">Посты</h5>
+          <p class="card-text">{{ stats.posts }}</p>
+          <i class="fas fa-file-alt"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+      document.querySelector('.sidebar').classList.toggle('show');
+      document.querySelector('main').classList.toggle('shifted');
+    });
+  </script>
+{% endblock %}

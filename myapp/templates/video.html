@@ -1,0 +1,832 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ video.title }}{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    .video-options-menu div {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+    .video-options-menu div:hover {
+        background-color: #f0f0f0;
+    }
+    </style>
+    
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Левая часть: основной плеер и информация о видео -->
+        <div class="col-lg-8">
+            <!-- Видео -->
+            <div class="plyr__video-embed mb-3">
+                <video class="js-player" controls>
+                    <source src="{{ url_for('static', filename='uploads/' ~ video.video_url) }}"type="video/mp4" size="{{ video.quality if video.quality is not none else '1080' }}">
+                    {% for variant in video.variants %}
+                        <source src="{{ url_for('static', filename='uploads/' ~ variant.file_url.replace('\\', '/')) }}" type="video/mp4" size="{{ variant.quality }}" codecs="avc1.42E01E, mp4a.40.2">
+                    {% endfor %}
+                </video>
+            </div>
+
+            <!-- Заголовок видео -->
+            <h3 class="font-weight-bold">{{ video.title }}</h3>
+
+            <!-- Блок с кол-вом просмотров, датой и т.д. -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-2">
+                <div class="text-muted">
+                    {{ video.views }} просмотров • {{ video.upload_date.strftime('%d %B %Y') }}
+                </div>
+                <div class="d-flex align-items-center">
+                    {% if current_user.is_authenticated %}
+                    <button style='margin-right: 10px;' id="report-current" 
+                            class="btn btn-sm btn-outline-danger me-2" 
+                            data-video-id="{{ video.video_id }}">
+                        <i class="fas fa-flag"></i> Пожаловаться
+                    </button>
+                    {% endif %}
+                    <!-- Кнопки лайка/дизлайка видео -->
+                    <button class="btn btn-sm btn-outline-primary mr-2" id="like-button" data-video-id="{{ video.video_id }}" data-like-type="1">
+                        👍 {{ video.likes.filter_by(like_type=1).count() }}
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="dislike-button" data-video-id="{{ video.video_id }}" data-like-type="-1">
+                        👎 {{ video.likes.filter_by(like_type=-1).count() }}
+                    </button>
+                </div>
+            </div>
+            {% if current_user.is_authenticated and playlists %}
+            <!-- Кнопка открытия модального окна -->
+            <button type="button" class="btn btn-outline-primary mb-3" data-toggle="modal" data-target="#playlistModal">
+                Добавить в плейлист
+            </button>
+            {% if current_user.is_authenticated and video.author.user_id == current_user.user_id %}
+            <form method="POST" action="{{ url_for('delete_video', video_id=video.video_id) }}" onsubmit="return confirm('Вы уверены, что хотите удалить это видео?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger mb-3">Удалить видео</button>
+            </form>
+            {% endif %}
+
+            <!-- Модальное окно для выбора плейлиста -->
+            <div class="modal fade" id="playlistModal" tabindex="-1" role="dialog" aria-labelledby="playlistModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <form method="POST" action="{{ url_for('add_to_playlist', video_id=video.video_id) }}">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title" id="playlistModalLabel">Добавить видео в плейлист</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    </div>
+                    <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="playlistSelect">Выберите плейлист</label>
+                        <select class="form-control" id="playlistSelect" name="playlist_id" required>
+                        {% for pl in playlists %}
+                        <option value="{{ pl.playlist_id }}">{{ pl.name }}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                    </div>
+                </div>
+                </form>
+            </div>
+            </div>
+            {% endif %}
+
+            <hr>
+
+            <!-- Блок информации о канале и кнопка подписки -->
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <a href="{{ url_for('profile', username=video.author.username) }}" class="text-decoration-none text-dark">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (video.author.profile_picture or 'default.jpg')) }}"
+                         alt="{{ video.author.username }}"
+                         class="rounded-circle"
+                         width="50"
+                         height="50">
+                    </a>
+                    <div class="ml-3">
+                        <h5 class="m-0">{{ video.author.username }}</h5>
+                        <p class="m-0 text-muted" style="font-size: 0.9rem;">
+                            {{ video.author.subscribers.count() }} подписчиков
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    {% if current_user.is_authenticated and current_user.user_id!=video.author.user_id %}
+                        {% if is_subscribed %}
+                            <form action="{{ url_for('subscribe', user_id=video.author.user_id) }}" method="post" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-secondary" type="submit">Отписаться</button>
+                            </form>
+                        {% else %}
+                            <form action="{{ url_for('subscribe', user_id=video.author.user_id) }}" method="post" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-danger" type="submit">Подписаться</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Описание видео + теги -->
+            <div class="bg-light p-3 rounded">
+                <!-- Текст описания -->
+                <div id="description-container" style="max-height: 100px; overflow: hidden; position: relative; transition: max-height 0.3s ease;">
+                    <p class="mb-2">{{ video.description }}</p>
+            
+                    {% if video.tags.count() > 0 %}
+                        <div class="mb-2">
+                            {% for vt in video.tags %}
+                                <span class="badge badge-info mr-1">{{ vt.tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+            
+                    {% if video.ingredients.count() > 0 %}
+                        <h6 class="font-weight-bold">Ингредиенты:</h6>
+                        <ul class="list-unstyled">
+                            {% for vi in video.ingredients %}
+                                <li>{{ vi.ingredient.name }} — {{ vi.amount }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                <!-- Кнопка Развернуть/Свернуть -->
+                <div class="text-center mt-2">
+                    <button id="toggle-description" class="btn btn-link p-0" style="font-size: 14px;">Развернуть</button>
+                </div>
+            </div>
+            
+
+            <hr>
+
+            <!-- Форма добавления нового комментария -->
+            <h5 class="mb-3">Комментарии</h5>
+            <form method="POST" action="{{ url_for('watch_video', video_id=video.video_id) }}" class="mb-4">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.content(class="form-control", rows="3", placeholder="Оставьте комментарий") }}
+                </div>
+                <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+            </form>
+
+            <!-- Вывод комментариев -->
+            {% for comment in comments %}
+                <div class="media mb-4">
+                    <a href="{{ url_for('profile', username=comment.author.username) }}" class="text-decoration-none text-dark">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (comment.author.profile_picture or 'default.jpg')) }}"
+                         class="mr-3 rounded-circle"
+                         alt="{{ comment.author.username }}"
+                         width="45"
+                         height="45">
+                    </a>
+                    <div class="media-body">
+                        <h6 class="mt-0">{{ comment.author.username }}
+                            <small class="text-muted ml-2" style="font-size: 0.8rem;" data-datetime="{{ comment.created_at.isoformat() }}">
+                                {{ comment.created_at.strftime('%d %b %Y %H:%M') }}
+                            </small>
+                            
+                            {% if current_user.is_authenticated and comment.user_id == current_user.user_id %}
+                                <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.comment_id) }}" style="display:inline;" onsubmit="return confirm('Вы уверены, что хотите удалить этот комментарий?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-link p-0" style="font-size:0.8rem;">[Удалить]</button>
+                                </form>
+                            {% endif %}
+                        </h6>
+                        <p class="mb-2" style="word-break: break-word;">{{ comment.content }}</p>
+
+                        <!-- Кнопки лайка и ответ -->
+                        <div class="d-flex align-items-center mb-2">
+                            <button class="btn btn-sm btn-outline-primary like-comment-button mr-2"
+                                    data-comment-id="{{ comment.comment_id }}">
+                                👍 {{ comment.likes.count() }}
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary reply-button"
+                                    data-comment-id="{{ comment.comment_id }}">
+                                Ответить
+                            </button>
+                        </div>
+
+                        <!-- Скрытая форма для ответа -->
+                        <div class="reply-form d-none mb-3" id="reply-form-{{ comment.comment_id }}">
+                            <form method="POST" action="{{ url_for('watch_video', video_id=video.video_id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="parent_comment_id" value="{{ comment.comment_id }}">
+                                <div class="form-group">
+                                    <textarea name="reply_content" class="form-control" rows="2" placeholder="Ваш ответ"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary">Отправить</button>
+                            </form>
+                        </div>
+
+                        <!-- Ответы на комментарий -->
+                        {% for reply in comment.replies.order_by(Comment.created_at.asc()).all() %}
+                            <div class="media mt-3">
+                                <a href="{{ url_for('profile', username=reply.author.username) }}" class="text-decoration-none text-dark">
+                                <img src="{{ url_for('static', filename='uploads/' ~ (reply.author.profile_picture or 'default.jpg')) }}"
+                                     class="mr-3 rounded-circle"
+                                     alt="{{ reply.author.username }}"
+                                     width="40"
+                                     height="40">
+                                </a>
+                                <div class="media-body">
+                                    <h6 class="mt-0">{{ reply.author.username }}
+                                        <small class="text-muted ml-2" style="font-size: 0.8rem;" data-datetime="{{ reply.created_at.isoformat() }}">
+                                            {{ reply.created_at.strftime('%d %b %Y %H:%M') }}
+                                        </small>
+                                        {% if current_user.is_authenticated and reply.user_id == current_user.user_id %}
+                                            <form method="POST" action="{{ url_for('delete_comment', comment_id=reply.comment_id) }}" style="display:inline;" onsubmit="return confirm('Вы уверены, что хотите удалить этот комментарий?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-link p-0" style="font-size:0.8rem;">[Удалить]</button>
+                                            </form>
+                                        {% endif %}
+                                    </h6>
+                                    
+                                    <p class="mb-2">{{ reply.content }}</p>
+                                    <button class="btn btn-sm btn-outline-primary like-comment-button"
+                                            data-comment-id="{{ reply.comment_id }}">
+                                        👍 {{ reply.likes.count() }}
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Правая часть: плейлист и похожие видео -->
+        <div class="col-lg-4">
+            {% if playlist_context %}
+            <div class="playlist-container mb-4" data-playlist-id="{{ playlist_context.playlist_id }}">
+            <!-- Header -->
+            <div class="playlist-header">
+                <h4 class="playlist-title">{{ playlist_context.name }}</h4>
+                <span class="playlist-info">
+                <span class="playlist-video-count">{{ playlist_videos|length }} видео</span>
+                </span>
+            </div>
+
+            <!-- Prev / Next / Loop -->
+            <div class="playlist-navigation">
+                <h5 class="playlist-nav-title">Сейчас играет: {{ video.title }}</h5>
+                <div class="playlist-nav-buttons">
+                <button class="playlist-nav-button playlist-prev" title="Предыдущее видео">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button class="playlist-nav-button playlist-next" title="Следующее видео">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+                <button class="playlist-nav-button playlist-loop" title="Повторять плейлист">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+                </div>
+            </div>
+
+            <!-- Список -->
+            <div class="playlist-videos">
+                {% for pl_video in playlist_videos %}
+                <div class="playlist-video-item {% if pl_video.video_id == video.video_id %}active now-playing{% endif %}"
+                     data-video-id="{{ pl_video.video_id }}"
+                     style="cursor: pointer; position: relative;">
+                    
+                    {% if pl_video.video_id == video.video_id %}
+                    <div class="playlist-nowplaying"></div>
+                    {% endif %}
+            
+                    <!-- Кнопка с тремя точками -->
+                    <div class="playlist-options-button" style="position: absolute; top: 8px; right: 8px;">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </div>
+            
+                    <div class="playlist-thumbnail-wrapper" onclick="location.href='{{ url_for('watch_video', video_id=pl_video.video_id) }}?playlist_id={{ playlist_context.playlist_id }}'">
+                        <span class="playlist-video-number">{{ loop.index }}</span>
+                        <img class="playlist-thumbnail"
+                             src="{{ url_for('static', filename='thumbnails/' ~ (pl_video.thumbnail_url or 'default_thumbnail.jpg')) }}"
+                             alt="{{ pl_video.title }}">
+                        {% if pl_video.duration %}
+                        {% set m = pl_video.duration // 60 %}
+                        {% set s = pl_video.duration % 60 %}
+                        <span class="playlist-video-duration">{{ m }}:{{ '%02d'|format(s) }}</span>
+                        {% endif %}
+                    </div>
+            
+                    <div class="playlist-video-details" onclick="location.href='{{ url_for('watch_video', video_id=pl_video.video_id) }}?playlist_id={{ playlist_context.playlist_id }}'">
+                        <div class="playlist-video-title">{{ pl_video.title }}</div>
+                        <span class="playlist-video-channel">{{ pl_video.author.username }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            
+            <div class="playlist-actions">
+            <!-- Shuffle / Save (только для владельца) -->
+            {% if current_user.is_authenticated and current_user.user_id == playlist_context.user_id %}
+                <button class="playlist-button playlist-shuffle">
+                <i class="fas fa-random"></i> Перемешать
+                </button>
+                
+            {% else %}
+                {% if current_user.is_authenticated %}
+                <form method="POST"
+                    action="{{ url_for('save_playlist', playlist_id=playlist_context.playlist_id) }}"
+                    class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="playlist-save-button">
+                <i class="fas fa-bookmark"></i> Сохранить плейлист
+                </button>
+            </form>
+                {% endif %}
+            {% endif %}
+            </div>
+            </div>
+
+            <!-- Подключаем Sortable.js -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.playlist-container');
+            const playlistId = container.dataset.playlistId;
+            const listEl = container.querySelector('.playlist-videos');
+            const items = Array.from(listEl.children);
+            let currentIdx = items.findIndex(el => el.classList.contains('now-playing'));
+
+            // Навигация
+            container.querySelector('.playlist-prev').addEventListener('click', () => {
+                const idx = currentIdx > 0 ? currentIdx - 1 : currentIdx;
+                const vid = items[idx].dataset.videoId;
+                window.location = `{{ url_for('watch_video', video_id=0) }}`.replace('0', vid) + '?playlist_id=' + playlistId;
+            });
+            container.querySelector('.playlist-next').addEventListener('click', () => {
+                const idx = currentIdx < items.length-1 ? currentIdx + 1 : currentIdx;
+                const vid = items[idx].dataset.videoId;
+                window.location = `{{ url_for('watch_video', video_id=0) }}`.replace('0', vid) + '?playlist_id=' + playlistId;
+            });
+            container.querySelector('.playlist-loop').addEventListener('click', () => {
+                const vid = items[currentIdx].dataset.videoId;
+                window.location = `{{ url_for('watch_video', video_id=0) }}`.replace('0', vid) + '?playlist_id=' + playlistId;
+            });
+            container.querySelector('.playlist-shuffle').addEventListener('click', () => {
+                // Получаем элементы
+                const videoItems = Array.from(listEl.children);
+                const currentVideoId = "{{ video.video_id }}";
+                const playlistId = container.dataset.playlistId;
+            
+                // Алгоритм Фишера-Йейтса для перемешивания
+                for (let i = videoItems.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    listEl.insertBefore(videoItems[j], videoItems[i]);
+                    // Обновим список, чтобы порядок сохранился
+                    [videoItems[i], videoItems[j]] = [videoItems[j], videoItems[i]];
+                }
+            
+                // Если перемешиваемый список нужно отправить на сервер
+                {% if current_user.is_authenticated and current_user.user_id == playlist_context.user_id %}
+                const order = Array.from(listEl.children).map(el => el.dataset.videoId);
+                updatePlaylistNumbers();
+                fetch(`{{ url_for('reorder_playlist', playlist_id=playlist_context.playlist_id) }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order })
+                });
+                {% endif %}
+            });
+            // Drag-and-drop reorder (только владелец)
+            {% if current_user.is_authenticated and current_user.user_id == playlist_context.user_id %}
+            Sortable.create(listEl, {
+                animation: 150,
+                onEnd: function() {
+                const order = Array.from(listEl.children).map(el => el.dataset.videoId);
+                updatePlaylistNumbers();
+                fetch(`{{ url_for('reorder_playlist', playlist_id=playlist_context.playlist_id) }}`, {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order })
+                });
+                }
+            });
+            {% endif %}
+            });
+            function updatePlaylistNumbers() {
+                const items = document.querySelectorAll('.playlist-videos .playlist-video-item');
+                items.forEach((item, index) => {
+                    const numberEl = item.querySelector('.playlist-video-number');
+                    if (numberEl) {
+                        numberEl.textContent = index + 1;
+                    }
+                });
+            }
+            
+            </script>
+            {% endif %}
+
+
+            <!-- Похожие видео -->
+            <h5 class="mb-3">Похожие видео</h5>
+            {% for similar_video in similar_videos %}
+            <div class="rec-video-card" onclick="location.href='{{ url_for('watch_video', video_id=similar_video.video_id) }}'" style="cursor: pointer;">
+                <div class="rec-thumbnail">
+                    <img src="{{ url_for('static', filename='thumbnails/' ~ (similar_video.thumbnail_url or 'default_thumbnail.jpg')) }}" alt="{{ similar_video.title }}">
+                    {% if similar_video.duration %}
+                        {% set m = similar_video.duration // 60 %}
+                        {% set s = similar_video.duration % 60 %}
+                        <span class="video-duration">{{ m }}:{{ '%02d'|format(s) }}</span>
+                    {% endif %}
+                </div>
+                <div class="rec-video-info">
+                    <div class="rec-title">{{ similar_video.title }}</div>
+                    <div class="rec-channel-name">{{ similar_video.author.username }} <span class="verified-icon"><i class="fas fa-check"></i></span></div>
+                    <div class="rec-metadata">{{ similar_video.views }} просмотров • {{ video.upload_date.strftime('%d %B %Y') }}</div>
+                </div>
+                <div class="video-options-button" data-video-id="{{ similar_video.video_id }}" style="position: relative;">
+                    <i class="fas fa-ellipsis-v"></i>
+                </div>
+                
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- JS для ответа и лайков -->
+<script>
+    // Получаем CSRF-токен из meta-тега
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Переключение формы ответа
+    document.querySelectorAll('.reply-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var commentId = this.getAttribute('data-comment-id');
+            var replyForm = document.getElementById('reply-form-' + commentId);
+            replyForm.classList.toggle('d-none');
+        });
+    });
+
+    // Лайк комментария
+    document.querySelectorAll('.like-comment-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var commentId = this.getAttribute('data-comment-id');
+            fetch("/like_comment/" + commentId, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: ""
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        });
+    });
+
+    // Лайк / дизлайк видео (like-button / dislike-button)
+    // Если хотите сделать две отдельные кнопки, можно добавить аналогичный код для dislike-button
+    var likeButton = document.getElementById('like-button');
+    if(likeButton){
+        likeButton.addEventListener('click', function() {
+            var likeType = this.getAttribute('data-like-type');
+            fetch("{{ url_for('like_video', video_id=video.video_id) }}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: "like_type=" + likeType
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        });
+    }
+
+    var dislikeButton = document.getElementById('dislike-button');
+    if(dislikeButton){
+        dislikeButton.addEventListener('click', function() {
+            var likeType = this.getAttribute('data-like-type');
+            fetch("{{ url_for('like_video', video_id=video.video_id) }}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: "like_type=" + likeType
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        });
+    }
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const players = Array.from(document.querySelectorAll('.js-player')).map(p => new Plyr(p, {
+    // Пример настроек
+    captions: { active: true, update: true },
+    controls: [
+        'play-large', // Кнопка в центре
+        'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen'
+    ],
+    settings: ['quality', 'captions', 'speed', 'loop'],
+    loop: { active: false },
+    /* Локализация интерфейса */
+    i18n: {
+        restart: 'Перезапустить',
+        rewind: 'Перемотка {seektime} сек',
+        play: 'Воспроизвести',
+        pause: 'Пауза',
+        fastForward: 'Перемотка вперёд {seektime} сек',
+        seek: 'Перемотать',
+        played: 'Проиграно',
+        buffered: 'Буферизация',
+        currentTime: 'Текущее время',
+        duration: 'Длительность',
+        volume: 'Громкость',
+        mute: 'Выключить звук',
+        unmute: 'Включить звук',
+        enableCaptions: 'Включить субтитры',
+        disableCaptions: 'Выключить субтитры',
+        download: 'Скачать',
+        enterFullscreen: 'На весь экран',
+        exitFullscreen: 'Выход из полноэкранного режима',
+        frameTitle: 'Плеер для {title}',
+        captions: 'Субтитры',
+        settings: 'Настройки',
+        speed: 'Скорость',
+        normal: 'Обычная',
+        quality: 'Качество',
+        loop: 'Зациклить',
+    }
+    }));
+});
+</script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const descriptionContainer = document.getElementById('description-container');
+        const toggleButton = document.getElementById('toggle-description');
+        let expanded = false;
+
+        toggleButton.addEventListener('click', function() {
+            if (expanded) {
+                descriptionContainer.style.maxHeight = '100px';
+                toggleButton.textContent = 'Развернуть';
+            } else {
+                descriptionContainer.style.maxHeight = '10000000px'; // любое большое значение
+                toggleButton.textContent = 'Свернуть';
+            }
+            expanded = !expanded;
+        });
+    });
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('[data-datetime]').forEach(function(el) {
+            const datetime = el.dataset.datetime;
+            const formatted = moment(datetime).fromNow();
+            el.textContent = formatted;
+        });
+    });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Закрытие всех активных меню
+            function closeAllMenus() {
+                document.querySelectorAll('.video-options-menu').forEach(menu => menu.remove());
+            }
+        
+            // Клик по кнопке с 3 точками
+            document.querySelectorAll('.video-options-button').forEach(button => {
+                button.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    closeAllMenus();
+        
+                    const videoId = this.dataset.videoId;
+        
+                    const menu = document.createElement('div');
+                    menu.className = 'video-options-menu';
+                    menu.style.position = 'absolute';
+                    menu.style.top = '25px';
+                    menu.style.right = '0';
+                    menu.style.zIndex = '1000';
+                    menu.style.background = '#fff';
+                    menu.style.border = '1px solid #ccc';
+                    menu.style.borderRadius = '4px';
+                    menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                    menu.innerHTML = `
+                        <div class="video-options-item" data-action="watch_later">Смотреть позже</div>
+                        <div class="video-options-item" data-bs-toggle="modal" data-bs-target="#reportModal">
+                        Пожаловаться
+                        </div>
+                    `;
+        
+                    this.appendChild(menu);
+        
+                    // Обработка кликов в меню
+                    menu.querySelectorAll('.video-options-item').forEach(item => {
+                        item.addEventListener('click', function () {
+                            const action = this.dataset.action;
+        
+                            if (action === 'watch_later') {
+                                fetch(`/api/watch_later/${videoId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': '{{ csrf_token() }}'
+                                    }
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.status === 'success') {
+                                        alert('Добавлено в "Смотреть позже"');
+                                    }
+                                });
+                            } else if (action === 'report') {
+                                alert('Жалоба отправлена'); // Пока просто сообщение
+                            }
+        
+                            menu.remove();
+                        });
+                    });
+                });
+            });
+        
+            // Закрытие меню при клике вне
+            document.addEventListener('click', function () {
+                closeAllMenus();
+            });
+        });
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                function closeMenus() {
+                    document.querySelectorAll('.playlist-options-menu').forEach(menu => menu.remove());
+                }
+            
+                document.querySelectorAll('.playlist-options-button').forEach(button => {
+                    button.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        closeMenus();
+            
+                        const videoId = this.closest('.playlist-video-item').dataset.videoId;
+                        const playlistId = "{{ playlist_context.playlist_id }}";
+            
+                        const rect = this.getBoundingClientRect();
+                        const container = document.querySelector('.playlist-container.mb-4');
+                        const containerRect = container.getBoundingClientRect();
+            
+                        const menu = document.createElement('div');
+                        menu.className = 'playlist-options-menu';
+                        menu.style.position = 'absolute';
+                        menu.style.top = `${rect.bottom - containerRect.top}px`;
+                        menu.style.right = `${containerRect.right - rect.left}px`;
+
+                        menu.style.background = '#fff';
+                        menu.style.border = '1px solid #ccc';
+                        menu.style.borderRadius = '4px';
+                        menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                        menu.style.zIndex = '999';
+                        menu.innerHTML = `
+                            <div class="playlist-options-item" style="padding: 8px 12px; cursor: pointer;">Убрать из плейлиста</div>
+                        `;
+            
+                        container.appendChild(menu);
+            
+                        menu.querySelector('.playlist-options-item').addEventListener('click', function () {
+                            fetch(`/api/playlist/${playlistId}/remove/${videoId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': '{{ csrf_token() }}'
+                                }
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    location.reload();
+                                }
+                            });
+            
+                            menu.remove();
+                        });
+                    });
+                });
+            
+                document.addEventListener('click', function () {
+                    closeMenus();
+                });
+            });
+            
+            </script>
+                        <!-- Модалка жалобы -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form id="reportForm" method="POST" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="video_id" id="reportVideoId">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="reportModalLabel">Пожаловаться на видео</h5>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="reportReason" class="form-label">Причина жалобы</label>
+              <textarea id="reportReason" name="reason" class="form-control" rows="4" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer" style="flex-wrap:nowrap">
+            <button type="submit" class="btn btn-danger">Отправить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // инициализируем Bootstrap-модалку
+      const reportModalEl = document.getElementById('reportModal');
+      const reportModal = new bootstrap.Modal(reportModalEl);
+    
+      // общая функция для открытия модалки
+      function openReportModal(videoId) {
+        // подставляем action формы, чтобы бекенд знал, на какой ид жалоба
+        document.getElementById('reportForm').action = `/report_video/${videoId}`;
+        document.getElementById('reportVideoId').value = videoId;
+        reportModal.show();
+      }
+    
+      // 3-точечное меню похожих видео
+      document.querySelectorAll('.video-options-button').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          // убираем старые меню
+          document.querySelectorAll('.video-options-menu').forEach(m=>m.remove());
+    
+          const videoId = btn.closest('.rec-video-card').querySelector('[data-video-id]')?.getAttribute('data-video-id')
+                         || btn.getAttribute('data-video-id');
+          // создаём своё простое меню
+          const menu = document.createElement('div');
+          menu.className = 'video-options-menu';
+          menu.innerHTML = `
+            <div class="video-options-item" data-action="watch_later">Смотреть позже</div>
+            <div class="video-options-item" data-action="report">Пожаловаться</div>
+          `;
+          btn.append(menu);
+    
+          menu.addEventListener('click', ev => {
+            ev.stopPropagation();
+            const action = ev.target.dataset.action;
+            if (action === 'report') {
+              openReportModal(videoId);
+            }
+            if (action === 'watch_later') {
+              // ваша логика «Смотреть позже»
+            }
+            menu.remove();
+          });
+        });
+      });
+    
+      // кнопка жалобы на текущее видео
+      const reportCurrent = document.getElementById('report-current');
+      if (reportCurrent) {
+        reportCurrent.addEventListener('click', () => {
+          openReportModal(reportCurrent.getAttribute('data-video-id'));
+        });
+      }
+    
+      // клик вне меню — закрыть
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.video-options-menu').forEach(m=>m.remove());
+      });
+    });
+    </script>
+      
+{% endblock %}

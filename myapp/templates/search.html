@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Поиск{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <form method="GET" action="{{ url_for('search') }}">
+    <input type="hidden" name="q" value="{{ request.args.get('q','') }}">
+    <div class="form-row align-items-end">
+      <div class="form-group col-md-2">
+        <button type="button" class="btn btn-outline-secondary btn-block" id="filterToggleBtn">
+          <i class="fas fa-sliders-h mr-1"></i> Фильтры
+        </button>
+      </div>
+    </div>
+
+    <div id="filterContainer" class="mt-3" style="display: none;">
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <h6>ПО ДАТЕ ЗАГРУЗКИ</h6>
+              <div class="form-group">
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="date_any" name="date_filter" value="" class="custom-control-input" {% if not date_filter %}checked{% endif %}>
+                  <label class="custom-control-label" for="date_any">Любая</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="date_today" name="date_filter" value="today" class="custom-control-input" {% if date_filter=='today' %}checked{% endif %}>
+                  <label class="custom-control-label" for="date_today">Сегодня</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="date_week" name="date_filter" value="week" class="custom-control-input" {% if date_filter=='week' %}checked{% endif %}>
+                  <label class="custom-control-label" for="date_week">За эту неделю</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="date_month" name="date_filter" value="month" class="custom-control-input" {% if date_filter=='month' %}checked{% endif %}>
+                  <label class="custom-control-label" for="date_month">За этот месяц</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="date_year" name="date_filter" value="year" class="custom-control-input" {% if date_filter=='year' %}checked{% endif %}>
+                  <label class="custom-control-label" for="date_year">За этот год</label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <h6>ТИП</h6>
+              <div class="form-group">
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="type_all" name="type" value="all" class="custom-control-input" {% if type_filter == 'all' %}checked{% endif %}>
+                  <label class="custom-control-label" for="type_all">Все</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="type_video" name="type" value="video" class="custom-control-input" {% if type_filter == 'video' %}checked{% endif %}>
+                  <label class="custom-control-label" for="type_video">Видео</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="type_channel" name="type" value="channel" class="custom-control-input" {% if type_filter == 'channel' %}checked{% endif %}>
+                  <label class="custom-control-label" for="type_channel">Каналы</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="type_playlist" name="type" value="playlist" class="custom-control-input" {% if type_filter == 'playlist' %}checked{% endif %}>
+                  <label class="custom-control-label" for="type_playlist">Плейлисты</label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <h6>ДЛИТЕЛЬНОСТЬ</h6>
+              <div class="form-group">
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="duration_any" name="duration_filter" value="" class="custom-control-input" {% if not duration_filter %}checked{% endif %}>
+                  <label class="custom-control-label" for="duration_any">Любая</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="duration_short" name="duration_filter" value="short" class="custom-control-input" {% if duration_filter=='short' %}checked{% endif %}>
+                  <label class="custom-control-label" for="duration_short">Менее 4 минут</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="duration_medium" name="duration_filter" value="medium" class="custom-control-input" {% if duration_filter=='medium' %}checked{% endif %}>
+                  <label class="custom-control-label" for="duration_medium">От 4 до 20 минут</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="duration_long" name="duration_filter" value="long" class="custom-control-input" {% if duration_filter=='long' %}checked{% endif %}>
+                  <label class="custom-control-label" for="duration_long">Более 20 минут</label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <h6>УПОРЯДОЧИТЬ</h6>
+              <div class="form-group">
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="order_date" name="order_by" value="date" class="custom-control-input" {% if not order_by or order_by=='date' %}checked{% endif %}>
+                  <label class="custom-control-label" for="order_date">По дате загрузки</label>
+                </div>
+                <div class="custom-control custom-radio">
+                  <input type="radio" id="order_views" name="order_by" value="views" class="custom-control-input" {% if order_by=='views' %}checked{% endif %}>
+                  <label class="custom-control-label" for="order_views">По числу просмотров</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mt-3">
+            <div class="col-md-12">
+              <button type="submit" class="btn btn-primary">Применить фильтры</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Отображение результатов -->
+  {% if results %}
+    {% if results.video is defined and results.video|length > 0 %}
+      <h3 class="mt-4">Видео</h3>
+      <div class="videos-container">
+        {% for video in results.video %}
+        <div class="video-card">
+            <a href="{{ url_for('watch_video', video_id=video.video_id) }}" class="thumbnail-link">
+            <div class="thumbnail">
+                <img src="{{ url_for('static', filename='thumbnails/' ~ (video.thumbnail_url or 'default_thumbnail.jpg')) }}" alt="{{ video.title }}">
+                <div class="duration">{% if video.duration %}
+                    <!-- Если у вас есть длительность (в секундах) -->
+                    {% set minutes = video.duration // 60 %}
+                    {% set seconds = video.duration % 60 %}
+                    {{ minutes }}:{{ '%02d'|format(seconds) }}
+                {% endif %}</div>
+            </div>
+            <div class="video-info">
+                <div class="channel-icon">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (video.author.profile_picture or 'default.jpg')) }}"
+                                 class="channel-avatar"
+                                 alt="{{ video.author.username }}">
+                </div>
+                <div class="video-detail">
+                    <div class="title">{{ video.title }}</div>
+                    <div class="channel-name">{{ video.author.username }}</div>
+                    <div class="metadata">{{ video.views }} просмотров</div>
+                </div>
+            </div>
+            </a>
+        </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    
+    {% if results.channel is defined and results.channel|length > 0 %}
+      <h3 class="mt-4">Каналы</h3>
+      <div class="row">
+        {% for channel in results.channel %}
+          <div class="col-md-4 mb-4">
+            <div class="card h-100">
+              <a href="{{ url_for('profile', username=channel.username) }}">
+                <img src="{{ url_for('static', filename='uploads/' ~ (channel.profile_picture or 'default.jpg')) }}" class="card-img-top" alt="{{ channel.username }}">
+              </a>
+              <div class="card-body">
+                <h6 class="card-title">{{ channel.username }}</h6>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    
+    {% if results.playlist is defined and results.playlist|length > 0 %}
+      <h3 class="mt-4">Плейлисты</h3>
+      <div class="row">
+        {% for playlist in results.playlist %}
+          <div class="col-md-4 mb-4">
+            <div class="card h-100">
+              <div class="card-body">
+                <h6 class="card-title">{{ playlist.name }}</h6>
+                <p class="card-text">Создан: {{ playlist.created_at.strftime('%d %B %Y') }}</p>
+              </div>
+              <div class="card-footer">
+                <a href="{{ url_for('view_playlist', playlist_id=playlist.playlist_id) }}" class="btn btn-primary btn-block">Открыть плейлист</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    <p class="mt-4">Введите запрос для поиска.</p>
+  {% endif %}
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    const filterContainer = document.getElementById('filterContainer');
+    
+    filterToggleBtn.addEventListener('click', function() {
+      if (filterContainer.style.display === 'none') {
+        filterContainer.style.display = 'block';
+      } else {
+        filterContainer.style.display = 'none';
+      }
+    });
+    
+    // Check if there are any active filters and automatically open the filter container
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('date_filter') || 
+        (urlParams.has('type') && urlParams.get('type') !== 'all') || 
+        urlParams.has('duration_filter') || 
+        urlParams.has('order_by')) {
+      filterContainer.style.display = 'block';
+    }
+  });
+</script>
+{% endblock %}

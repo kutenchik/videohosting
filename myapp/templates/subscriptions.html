@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Подписки{% endblock %}
+{% block content %}
+  <div class="container mt-4">
+
+    <!-- Список каналов -->
+    <h2 class="mb-3">Каналы</h2>
+    <div class="d-flex flex-wrap">
+      {% for ch in channels %}
+        <div class="text-center mr-4 mb-4">
+          <a href="{{ url_for('profile', username=ch.username) }}" class="text-decoration-none text-dark">
+            <img src="{{ url_for('static', filename='uploads/' ~ (ch.profile_picture or 'default.jpg')) }}"
+                 class="rounded-circle mb-2"
+                 width="128" height="128" alt="{{ ch.username }}">
+            <div>{{ ch.username }}</div>
+          </a>
+        </div>
+      {% else %}
+        <p>Вы ещё не подписаны ни на один канал.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Лента новых видео -->
+    <h2 class="mb-3">Новые видео (за последнюю неделю)</h2>
+    {% if subscription_videos %}
+      <div class="videos-container">
+        {% for video in subscription_videos %}
+        <div class="video-card">
+            <a href="{{ url_for('watch_video', video_id=video.video_id) }}" class="thumbnail-link">
+            <div class="thumbnail">
+                <img src="{{ url_for('static', filename='thumbnails/' ~ (video.thumbnail_url or 'default_thumbnail.jpg')) }}" alt="{{ video.title }}">
+                <div class="duration">{% if video.duration %}
+                    <!-- Если у вас есть длительность (в секундах) -->
+                    {% set minutes = video.duration // 60 %}
+                    {% set seconds = video.duration % 60 %}
+                    {{ minutes }}:{{ '%02d'|format(seconds) }}
+                {% endif %}</div>
+            </div>
+            <div class="video-info">
+                <div class="channel-icon">
+                    <img src="{{ url_for('static', filename='uploads/' ~ (video.author.profile_picture or 'default.jpg')) }}"
+                                 class="channel-avatar"
+                                 alt="{{ video.author.username }}">
+                </div>
+                <div class="video-detail">
+                    <div class="title">{{ video.title }}</div>
+                    <div class="channel-name">{{ video.author.username }}</div>
+                    <div class="metadata">{{ video.views }} просмотров</div>
+                </div>
+            </div>
+            </a>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>Нет новых видео из подписок за последнюю неделю.</p>
+    {% endif %}
+
+  </div>
+{% endblock %}

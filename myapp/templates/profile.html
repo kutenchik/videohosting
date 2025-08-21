@@ -1,0 +1,513 @@
+{% extends 'base.html' %}
+
+{% block title %}Профиль {{ user.username }}{% endblock %}
+{% set default_names = ['Смотреть позже','Понравившиеся'] %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Боковая панель с информацией о пользователе -->
+        <div class="col-md-3">
+            <img src="{{ url_for('static', filename='uploads/' ~ (user.profile_picture or 'default.jpg')) }}" alt="{{ user.username }}" style='object-fit: cover;border-radius:50%;width:150px;height:150px' class="img-thumbnail mb-3 d-block mx-auto">
+            <h3 style='text-align:center'>{{ user.username }}</h3>
+            <p>{{ user.bio }}</p>
+            {% if current_user.is_authenticated and current_user.user_id == user.user_id %}
+                <a href="{{ url_for('edit_profile') }}" class="btn btn-primary btn-block mb-2">Редактировать профиль</a>
+
+                <form method="POST" action="{{ url_for('logout') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-block">Выйти</button>
+                </form>
+            {% endif %}
+
+            {% if current_user.is_authenticated and current_user.user_id != user.user_id %}
+                {% if is_subscribed %}
+                    <form action="{{ url_for('subscribe', user_id=user.user_id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-secondary btn-block" type="submit">Отписаться</button>
+                    </form>
+                {% else %}
+                    <form action="{{ url_for('subscribe', user_id=user.user_id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-danger btn-block" type="submit">Подписаться</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Основной контент -->
+        <div class="col-md-9">
+            <!-- Навигационные вкладки -->
+            <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                <li class="nav-item">
+                  <a
+                    class="nav-link {% if active_tab=='videos' %}active{% endif %}"
+                    href="{{ url_for('profile', username=user.username, tab='videos') }}"
+                  >Видео</a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link {% if active_tab=='posts' %}active{% endif %}"
+                    href="{{ url_for('profile', username=user.username, tab='posts') }}"
+                  >Посты</a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link {% if active_tab=='playlists' %}active{% endif %}"
+                    href="{{ url_for('profile', username=user.username, tab='playlists') }}"
+                  >Плейлисты</a>
+                </li>
+                {% if current_user.is_authenticated and current_user.user_id == user.user_id %}
+                <li class="nav-item">
+                <a
+                    class="nav-link {% if active_tab=='history' %}active{% endif %}"
+                    href="{{ url_for('profile', username=user.username, tab='history') }}"
+                >История просмотров</a>
+                </li>
+                {% endif %}
+                {% if current_user.is_authenticated and current_user.user_id == user.user_id and banned_videos|length > 0 %}
+                <li class="nav-item">
+                  <a class="nav-link {% if active_tab=='banned' %}active{% endif %}" href="{{ url_for('profile', username=user.username, tab='banned') }}">Забаненные</a>
+                </li>
+                {% endif %}
+
+            </ul>
+              
+
+            <!-- Контент вкладок -->
+            <div class="tab-content" id="profileTabsContent">
+                <!-- Видео -->
+                <div class="tab-pane {% if active_tab=='videos' %}show active{% endif %}">
+                    {% if videos %}
+                    <br>
+                    <div class="videos-container" style="grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));">
+                        {% for video in videos %}
+                        <div class="video-card">
+                            <a href="{{ url_for('watch_video', video_id=video.video_id) }}" class="thumbnail-link">
+                            <div class="thumbnail">
+                                <img src="{{ url_for('static', filename='thumbnails/' ~ (video.thumbnail_url or 'default_thumbnail.jpg')) }}" alt="{{ video.title }}">
+                                <div class="duration">{% if video.duration %}
+                                    <!-- Если у вас есть длительность (в секундах) -->
+                                    {% set minutes = video.duration // 60 %}
+                                    {% set seconds = video.duration % 60 %}
+                                    {{ minutes }}:{{ '%02d'|format(seconds) }}
+                                {% endif %}</div>
+                            </div>
+                            <div class="video-info">
+                                <div class="channel-icon">
+                                    <img src="{{ url_for('static', filename='uploads/' ~ (video.author.profile_picture or 'default.jpg')) }}"
+                                                 class="channel-avatar"
+                                                 alt="{{ video.author.username }}">
+                                </div>
+                                <div class="video-detail">
+                                    <div class="title">{{ video.title }}</div>
+                                    <div class="channel-name">{{ video.author.username }}</div>
+                                    <div class="metadata">{{ video.views }} просмотров</div>
+                                </div>
+                            </div>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <p class="mt-3">Видео отсутствуют.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Посты -->
+                <div class="tab-pane {% if active_tab=='posts' %}show active{% endif %}">
+                    {% if posts %}
+                        {% for post in posts %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                
+                                {% if current_user.is_authenticated and post.user_id == current_user.user_id %}
+                                    <div class="card-footer">
+                                        <form method="POST" action="{{ url_for('delete_post', post_id=post.post_id) }}" onsubmit="return confirm('Вы уверены, что хотите удалить этот пост?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-danger btn-sm">Удалить пост</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                
+                                <!-- Контент поста -->
+                                <div class="post-content-container" id="post-container-{{ post.post_id }}" style="max-height: 150px; overflow: hidden; transition: max-height 0.3s ease;">
+                                    <p class="mb-2">{{ post.content }}</p>
+                
+                                    {% if post.image_url %}
+                                        <img src="{{ url_for('static', filename='uploads/' ~ post.image_url) }}" class="img-fluid mt-2" alt="Изображение">
+                                    {% endif %}
+                
+                                    {% if post.is_poll and post.poll_options.count() > 0 %}
+                                        <hr>
+                                        <h6>Опрос:</h6>
+                                        <div class="poll-options">
+                                            {% for option in post.poll_options %}
+                                                <div class="poll-option card mb-2" style="cursor:pointer;" onclick="submitVote({{ option.option_id }})">
+                                                    <div class="card-body d-flex justify-content-between align-items-center">
+                                                        <span>{{ option.option_text }}</span>
+                                                        <span class="badge badge-primary badge-pill">{{ option.votes.count() }}</span>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                
+                                <!-- Кнопка Развернуть/Свернуть пост -->
+                                {% if post.content|length > 300 or post.image_url or (post.is_poll and post.poll_options.count() > 0) %}
+                                <div class="text-center mt-2">
+                                    <button class="btn btn-link p-0 toggle-post-btn" data-post-id="{{ post.post_id }}" style="font-size: 14px;">Развернуть</button>
+                                </div>
+                                {% endif %}
+                
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>Постов нет.</p>
+                    {% endif %}
+                </div>
+                
+                <script>
+                    function submitVote(optionId) {
+                        var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                        fetch("/vote/" + optionId, {
+                            method: "POST",
+                            credentials: "same-origin",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "X-CSRFToken": csrfToken
+                            },
+                            body: ""
+                        })
+                        .then(response => {
+                            if(response.ok) {
+                                location.reload();
+                            } else {
+                                alert("Ошибка голосования.");
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Ошибка:", error);
+                        });
+                    }
+                    </script>
+                    
+                    <!-- Скрипт для переключения видимости текста поста -->
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function(){
+                        document.querySelectorAll('.show-more').forEach(function(link){
+                        link.addEventListener('click', function(e){
+                            e.preventDefault();
+                            var postId = this.getAttribute('data-post-id');
+                            document.getElementById('short-' + postId).classList.add('d-none');
+                            document.getElementById('full-' + postId).classList.remove('d-none');
+                        });
+                        });
+                        document.querySelectorAll('.show-less').forEach(function(link){
+                        link.addEventListener('click', function(e){
+                            e.preventDefault();
+                            var postId = this.getAttribute('data-post-id');
+                            document.getElementById('full-' + postId).classList.add('d-none');
+                            document.getElementById('short-' + postId).classList.remove('d-none');
+                        });
+                        });
+                    });
+                    </script>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            document.querySelectorAll('.toggle-post-btn').forEach(function(button) {
+                                button.addEventListener('click', function() {
+                                    const postId = this.getAttribute('data-post-id');
+                                    const container = document.getElementById('post-container-' + postId);
+                                    const expanded = container.dataset.expanded === 'true';
+                        
+                                    if (expanded) {
+                                        container.style.maxHeight = '150px';
+                                        this.textContent = 'Развернуть';
+                                        container.dataset.expanded = 'false';
+                                    } else {
+                                        container.style.maxHeight = container.scrollHeight + 'px'; // любое большое значение
+                                        this.textContent = 'Свернуть';
+                                        container.dataset.expanded = 'true';
+                                    }
+                                });
+                            });
+                        });
+                        </script>
+                        
+
+                <!-- Плейлисты -->
+                <div class="tab-pane {% if active_tab=='playlists' %}show active{% endif %}">
+                    
+                    <div class="row mt-3">
+                        {% for playlist in playlists %}
+                            {% if not playlist.is_private or (current_user.is_authenticated and current_user.user_id == playlist.user_id) %}
+                                <div class="col-md-6 mb-4">
+                                    <div class="card h-100 playlist-card" data-playlist-id="{{ playlist.playlist_id }}">
+                                        {% if current_user.is_authenticated
+                                                   and current_user.user_id == user.user_id
+                                                   and playlist.name not in default_names %}
+                                        <button id="delete-btn-{{ playlist.playlist_id }}" class="delete-playlist" title="Удалить плейлист" data-toggle="modal" data-target="#deleteModal{{ playlist.playlist_id }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        {% endif %}
+                                        <div class="card-body">
+                                            <div class="playlist-title-container">
+                                                <h6 class="card-title playlist-title" id="playlist-title-{{ playlist.playlist_id }}">{{ playlist.name }}</h6>
+                                                {% if current_user.user_id == user.user_id and playlist.name not in default_names %}
+                                                    <input type="text" class="form-control playlist-title-edit" id="playlist-title-edit-{{ playlist.playlist_id }}" value="{{ playlist.name }}">
+                                                {% endif %}
+                                                {% if current_user.is_authenticated and current_user.user_id == user.user_id and playlist.name not in default_names %} 
+                                                    <button id="edit-btn-{{ playlist.playlist_id }}" class="edit-playlist" title="Редактировать название" onclick="toggleEditMode({{ playlist.playlist_id }})">
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                            <p class="card-text">Создан: {{ playlist.created_at.strftime('%d %B %Y') }}</p>
+                                        </div>
+                                        <div class="card-footer">
+                                            <a href="{{ url_for('view_playlist', playlist_id=playlist.playlist_id) }}" class="btn btn-primary btn-block btn-transition">Открыть плейлист</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Модальное окно подтверждения удаления -->
+                                    <div class="modal fade modal-confirm" id="deleteModal{{ playlist.playlist_id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <div class="icon-box">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </div>
+                                                    <h5 class="modal-title text-center w-100 mt-3">Удалить плейлист?</h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body text-center">
+                                                    <p>Вы уверены, что хотите удалить плейлист "{{ playlist.name }}"?<br>Это действие нельзя отменить.</p>
+                                                </div>
+                                                <div class="modal-footer justify-content-center">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                                                    <button type="button" class="btn btn-danger" onclick="deletePlaylist({{ playlist.playlist_id }})">Удалить</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+            </div>
+            <script>
+                // Получаем CSRF-токен из meta-тега
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+              
+                function toggleEditMode(playlistId) {
+                  const titleElement = document.getElementById(`playlist-title-${playlistId}`);
+                  const editElement  = document.getElementById(`playlist-title-edit-${playlistId}`);
+                  const editBtn      = document.getElementById(`edit-btn-${playlistId}`);
+                  const deleteBtn    = document.getElementById(`delete-btn-${playlistId}`);
+              
+                  if (titleElement.style.display !== 'none') {
+                    titleElement.style.display = 'none';
+                    editElement.style.display  = 'block';
+                    editElement.focus();
+                    editElement.select();
+              
+                    editBtn   && (editBtn.style.display   = 'none');
+                    deleteBtn && (deleteBtn.style.display = 'none');
+              
+                    // Снимаем старые слушатели, чтобы не дублировались
+                    editElement.onkeypress = null;
+                    editElement.onblur     = null;
+              
+                    editElement.onkeypress = e => {
+                      if (e.key === 'Enter') savePlaylistTitle(playlistId);
+                    };
+                    editElement.onblur = () => savePlaylistTitle(playlistId);
+                  }
+                }
+              
+                function savePlaylistTitle(playlistId) {
+                  const titleElement = document.getElementById(`playlist-title-${playlistId}`);
+                  const editElement  = document.getElementById(`playlist-title-edit-${playlistId}`);
+                  const editBtn      = document.getElementById(`edit-btn-${playlistId}`);
+                  const deleteBtn    = document.getElementById(`delete-btn-${playlistId}`);
+                  const newTitle     = editElement.value.trim();
+              
+                  if (!newTitle) {
+                    // Если пустое — просто выход
+                    titleElement.style.display = 'block';
+                    editElement.style.display  = 'none';
+                    editBtn   && (editBtn.style.display   = 'inline-block');
+                    deleteBtn && (deleteBtn.style.display = 'inline-block');
+                    return;
+                  }
+              
+                  fetch(`/update_playlist/${playlistId}`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRFToken':   csrfToken,
+                      'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ name: newTitle })
+                  })
+                  .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                  })
+                  .then(data => {
+                    if (data.success) {
+                      titleElement.textContent = newTitle;
+                      const modalText = document.querySelector(`#deleteModal${playlistId} .modal-body p`);
+                      if (modalText) modalText.innerHTML =
+                        `Вы уверены, что хотите удалить плейлист "${newTitle}"?<br>Это действие нельзя отменить.`;
+                      showNotification('Название плейлиста обновлено');
+                    } else {
+                      showNotification('Ошибка при обновлении названия', 'danger');
+                    }
+                  })
+                  .catch(err => {
+                    console.error('savePlaylistTitle error:', err);
+                    showNotification('Ошибка при обновлении названия', 'danger');
+                  })
+                  .finally(() => {
+                    // В любом случае возвращаем отображение
+                    titleElement.style.display = 'block';
+                    editElement.style.display  = 'none';
+                    editBtn   && (editBtn.style.display   = 'inline-block');
+                    deleteBtn && (deleteBtn.style.display = 'inline-block');
+                  });
+                }
+              
+                function deletePlaylist(playlistId) {
+                  fetch(`/delete_playlist/${playlistId}`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                      'X-CSRFToken': csrfToken,
+                      'X-Requested-With': 'XMLHttpRequest'
+                    }
+                  })
+                  .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                  })
+                  .then(data => {
+                    if (data.success) {
+                      $(`#deleteModal${playlistId}`).modal('hide');
+                      const playlistCard = document.querySelector(`.playlist-card[data-playlist-id="${playlistId}"]`);
+                      if (playlistCard) playlistCard.closest('.col-md-6').remove();
+                      if (document.querySelectorAll('.playlist-card').length === 0) {
+                        document.querySelector('.row.mt-3').innerHTML =
+                          '<div class="col-12"><p class="mt-3">Плейлистов нет.</p></div>';
+                      }
+                      showNotification('Плейлист удалён');
+                    } else {
+                      showNotification('Ошибка при удалении плейлиста', 'danger');
+                    }
+                  })
+                  .catch(err => {
+                    console.error('deletePlaylist error:', err);
+                    showNotification('Ошибка при удалении плейлиста', 'danger');
+                  });
+                }
+              </script>
+              
+
+                <!-- Записи (История просмотров) -->
+                {% if current_user.is_authenticated and current_user.user_id == user.user_id %}
+                <div class="tab-pane {% if active_tab=='history' %}show active{% endif %}">
+                    {% if watch_history %}
+                        <div class="list-group mt-3">
+                            {% for history in watch_history %}
+                                <div class="list-group-item d-flex align-items-center justify-content-between">
+                                    <a href="{{ url_for('watch_video', video_id=history.video.video_id) }}" class="d-flex align-items-center text-decoration-none">
+                                        <img src="{{ url_for('static', filename='thumbnails/' ~ (history.video.thumbnail_url or 'default_thumbnail.jpg')) }}"
+                                             alt="{{ history.video.title }}"
+                                             class="img-thumbnail mr-3"
+                                             style="width: 150px; height: auto;">
+                                        <div>
+                                            <h6 class="mb-1">{{ history.video.title }}</h6>
+                                            <p class="mb-1 text-muted">Просмотрено: {{ history.viewed_at.strftime('%d %B %Y, %H:%M') }}</p>
+                                            <small class="text-muted">Автор: {{ history.video.author.username }}</small>
+                                        </div>
+                                    </a>
+                                    <form action="{{ url_for('delete_history', history_id=history.id) }}" method="POST" onsubmit="return confirm('Удалить эту запись?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="mt-3">История просмотров пуста.</p>
+                    {% endif %}
+                </div>
+                {%endif%}
+                {% if current_user.is_authenticated and current_user.user_id == user.user_id %}
+                <div class="tab-pane {% if active_tab=='banned' %}show active{% endif %}">
+                    {% if banned_videos %}
+                    <br>
+                    <div class="videos-container" style="grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));">
+                        {% for video in banned_videos %}
+                        <div class="video-card disabled">
+                            <div class="thumbnail">
+                                <img src="{{ url_for('static', filename='thumbnails/' ~ (video.thumbnail_url or 'default_thumbnail.jpg')) }}" alt="{{ video.title }}">
+                                <div class="duration">{% if video.duration %}
+                                    {% set minutes = video.duration // 60 %}
+                                    {% set seconds = video.duration % 60 %}
+                                    {{ minutes }}:{{ '%02d'|format(seconds) }}
+                                {% endif %}</div>
+                            </div>
+                            <div class="video-info">
+                                <div class="video-detail">
+                                    <div class="title text-muted">{{ video.title }}</div>
+                                    <div class="metadata text-muted">{{ video.views }} просмотров • Забанено</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-warning mt-2" data-toggle="modal" data-target="#appealModal{{ video.video_id }}">Подать апелляцию</button>
+
+                            <!-- Modal -->
+                            <div class="modal fade" id="appealModal{{ video.video_id }}" tabindex="-1" role="dialog" aria-labelledby="appealModalLabel{{ video.video_id }}" aria-hidden="true">
+                              <div class="modal-dialog" role="document">
+                                <form method="POST" action="{{ url_for('appeal_video', video_id=video.video_id) }}">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h5 class="modal-title" id="appealModalLabel{{ video.video_id }}">Апелляция на видео</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+                                      <span aria-hidden="true">&times;</span>
+                                    </button>
+                                  </div>
+                                  <div class="modal-body">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="form-group">
+                                      <label for="reason{{ video.video_id }}">Причина апелляции</label>
+                                      <textarea class="form-control" id="reason{{ video.video_id }}" name="reason" rows="4" required></textarea>
+                                    </div>
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                                    <button type="submit" class="btn btn-primary">Отправить</button>
+                                  </div>
+                                </div>
+                                </form>
+                              </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <p class="mt-3">Забаненных видео нет.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
